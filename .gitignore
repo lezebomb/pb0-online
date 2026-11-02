@@ -1,0 +1,10 @@
+reference/
+downloads/
+tools/
+backups/
+game-instances/
+runs/
+dist/
+**/bin/
+**/obj/
+*.user
