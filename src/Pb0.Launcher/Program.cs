@@ -118,14 +118,21 @@ public static class Program
         void LaunchGame()
         {
             if(game is {HasExited:false})return;
-            // Refuse a second live copy until save isolation has actually been verified.
-            if(Process.GetProcessesByName("PBZ").Any(p=>
+            // Multiple games require explicit development mode and independently verified save roots.
+            foreach(var other in Process.GetProcessesByName("PBZ"))
             {
-                try {return p.MainModule?.FileName.EndsWith(@"\platform\steam\PBZ.exe",StringComparison.OrdinalIgnoreCase)==true;}
-                catch(System.ComponentModel.Win32Exception) {return true;}
-                finally {p.Dispose();}
-            }))
-                throw new IOException("已有 PBZ 进程。尚未验证本版本存档隔离，暂不自动启动第二份游戏。");
+                using(other)
+                {
+                    if(other.HasExited)continue;
+                    string otherExe;
+                    try {otherExe=other.MainModule?.FileName ?? throw new IOException("不能确认已有游戏路径");}
+                    catch(System.ComponentModel.Win32Exception) {throw new IOException("不能确认已有游戏路径，不启动第二实例");}
+                    var otherRoot=Path.GetFullPath(Path.Combine(Path.GetDirectoryName(otherExe)!,"..",".."));
+                    if(!args.Contains("--allow-isolated-games") || !GameBridge.VerifiedIsolation(gameRoot) || !GameBridge.VerifiedIsolation(otherRoot) ||
+                        string.Equals(Path.GetFullPath(gameRoot),otherRoot,StringComparison.OrdinalIgnoreCase))
+                        throw new IOException("已有 PBZ 进程；双实例仅允许不同且已实测存档隔离的测试副本。");
+                }
+            }
             bridge.Configure(room,host,instance);
             game=bridge.Launch(instance,isolatedSave:true);
             Emit("game_started",new {pid=game.Id,instance});

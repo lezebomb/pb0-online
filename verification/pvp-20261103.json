@@ -1,0 +1,117 @@
+{
+  "Schema": 1,
+  "VerifiedAt": "2026-11-03T00:52:02.5956278+08:00",
+  "StageComplete": true,
+  "SingleRealGame": {
+    "Ok": true,
+    "Measurements": {
+      "ghostTravelCm": 292.10649987015665,
+      "damage": {
+        "samples": 40,
+        "hpStart": 850,
+        "postureStart": 400,
+        "hpLoss": 64,
+        "postureLoss": 74.83871459961,
+        "remoteMoves": 1,
+        "attackActive": true,
+        "playerMontages": [
+          "Hun_Young_Tang_Hit_Light_F_L_Montage"
+        ],
+        "deflectInput": false
+      },
+      "parry": {
+        "samples": 43,
+        "hpStart": 786,
+        "postureStart": 380.42004394531,
+        "hpLoss": 0,
+        "postureLoss": 0,
+        "remoteMoves": 1,
+        "attackActive": true,
+        "playerMontages": [
+          "Hun_Tang_DefenceNormal_C_Montage",
+          "AM_Hun_Young_StanceEnter",
+          "AM_Hun_Young_StanceExit"
+        ],
+        "deflectInput": true,
+        "nativeParry": true,
+        "enginePerfect": true,
+        "nativeReward": true,
+        "remotePostureLoss": 60
+      },
+      "block": {
+        "samples": 48,
+        "hpStart": 786,
+        "postureStart": 400,
+        "hpLoss": 0,
+        "postureLoss": 37.41937255859,
+        "remoteMoves": 1,
+        "attackActive": true,
+        "playerMontages": [
+          "AM_Hun_Young_StanceEnter",
+          "Hun_Tang_DefenceNormal_B_Montage"
+        ],
+        "deflectInput": false
+      }
+    },
+    "Checks": {
+      "modLoaded": true,
+      "nativeBidirectional": true,
+      "connectedStatus": true,
+      "playerSnapshots": true,
+      "ghostVisible": true,
+      "ghostMoving": true,
+      "attackApplied": true,
+      "damage": true,
+      "block": true,
+      "parry": true
+    }
+  },
+  "TwoRealGames": {
+    "Ok": true,
+    "Measurements": {
+      "host-hits-guest": {
+        "hpLoss": 64,
+        "postureLoss": 74.83871459961
+      },
+      "guest-hits-host": {
+        "hpLoss": 64,
+        "postureLoss": 74.83871459961
+      },
+      "parry": {
+        "defenderHpLoss": 0,
+        "attackerPostureLoss": 60,
+        "engineTag": "Deflect.Result.Perfect"
+      },
+      "block": {
+        "hpLoss": 0,
+        "postureLoss": 37.41937255859
+      }
+    },
+    "Checks": {
+      "isolatedSaves": true,
+      "twoRealGames": true,
+      "bothGhosts": true,
+      "hostHitsGuest": true,
+      "guestHitsHost": true,
+      "realParry": true,
+      "realBlock": true
+    }
+  },
+  "SaveIsolation": {
+    "OriginalInstallationUnchangedDuringTests": true,
+    "LatestPersonalSaveRestored": true,
+    "BothProfilesVerifiedByActualGameSave": true,
+    "PersonalFilesVerified": 26,
+    "BothTestProfilesBackedUp": true
+  },
+  "Cleanup": {
+    "LiveTestProcesses": 0,
+    "LiveGameProcesses": 0,
+    "GameLifetime": "Windows Job + bounded session duration"
+  },
+  "Limits": [
+    "Desktop locked; mesh visibility and motion verified through actual game state, no rendered screenshot",
+    "Two real game processes on one PC; separate-PC internet combat not tested",
+    "Single-process simulated peer tests incoming combat; two-way real damage uses the two-game test"
+  ]
+}

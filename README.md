@@ -1,4 +1,5 @@
 # 影之刃零 PvP 网络启动器
+2026-11-03 已通过单真实游戏模拟对手与双真实游戏互攻验收。`Start-PvP-Prototype.cmd` 启动单实例来袭演示；`Start-Real-PvP-Test.cmd` 完成双实例自动互攻。两者先备份个人存档、切换测试存档，结束后恢复个人进度；默认有运行时限。见 [实际开发进度](DEVELOPMENT-STATUS.md) 和 [验收摘要](verification/pvp-20261103.json)。当前已停止测试并恢复个人存档。
 
 Windows x64 开发版，自带 .NET 9 运行库，无 Python 依赖。双击 `Start-PB0.cmd`，选创建房间或输入完整邀请码。本机开发测试用 `Start-Development.cmd`，它选择独立游戏副本；原安装目录保持用于正常游戏。邀请码包含房间密钥，24 小时有效，只发给另一位玩家。
 
@@ -45,13 +46,15 @@ node scripts/test-network.mjs --relay
 
 游戏使用正版原始 `platform/steam/PBZ.exe` 直接启动，提供 960×540 窗口参数；不会改可执行文件或绕过 DRM。若游戏自身要求正常授权，应按游戏要求处理。
 
-双游戏实例尚未验证存档目录隔离，因此启动器当前会拒绝自动启动第二份 PBZ。`PBZCOOP_INSTANCE` 仅隔离 Mod 文件，不足以保证游戏存档隔离。`-UserDir` 是否被当前游戏采用，需要检查实际游戏结果后再开放双实例。
+host 和 guest 副本已分别通过真实游戏保存接口写盘验证，Saved/SaveGames 与 user-data 均独立。双实例仅接受不同且已有隔离证据的测试副本，并须显式 `--allow-isolated-games`；不会自动允许原安装参与。`PBZCOOP_INSTANCE` 单独不构成存档隔离证明。
 
 `scripts/probe-real-game.ps1` 只做单实例直接启动和日志检查，不自动读档/创建人物。原存档备份始终留在 `backups`，不自动还原覆盖新的游戏进度。
 
 开发测试改用 `scripts/prepare-test-profile.ps1` 生成的 `game-instances/host`。程序文件原样复制，只有资源/运行库目录是指向原安装的目录联接，Saved 和 Mod 配置为独立目录。不能递归删除联接的目标目录。
 
-`scripts/test-game-bridge.ps1` 在整个测试期间打开原存档的只读文件句柄，阻止其他进程写入或删除已有原存档，不修改权限或文件属性。它启动独立游戏、两个网络客户端和模拟客人，验证原生 Mod 通过 EasyTier 的带签名 UDP 握手。该测试已通过：`auth=on connected=yes rejected=0`，原存档哈希不变；尚未进入角色同步/实际战斗验证。
+`scripts/test-game-bridge.ps1` 保护原安装活动存档并校验个人备份；默认验收完整 PvP，要求真实可见运动实体、实际技能和 HP/架势变化、引擎 Perfect 弹反与原生 V 回传。`-Dual` 测试两个真实游戏进程，已验证双方各 64 点真实伤害、弹反的攻击方 60 点架势惩罚及普通格挡。
+
+原型是开发测试版：单进程模拟端用于来袭/防御，不判定模拟端自身受伤/胜负；双向真实伤害由双进程入口验证。锁屏运行已通过游戏数据验证，尚未目视核对渲染截图，亦未测试异地两台电脑的实战。
 
 测试目录中的 `steam_appid.txt` 是 [Steam 官方支持的直接启动开发配置](https://partner.steamgames.com/doc/api/steam_api#SteamAPI_RestartAppIfNecessary)，只防止游戏被重新启动到原安装目录。游戏的正版授权仍由原程序和 Steam API 处理。
 
@@ -69,6 +72,6 @@ node scripts/test-network.mjs --relay
 - [EasyTier 共享节点用法](https://doc.easytier.cn/guide/network/fast-networking.html)；[社区共享节点声明](https://github.com/orgs/EasyTier/discussions/2429)。
 - [slarker 节点维护者的使用说明](https://wiki.slarker.me/application/easytier.html)。当前 IPv4 经独立 DNS 查询核对；域名仅用于发现公开节点，不修改系统 DNS 配置。
 - [PBZ 专用 UE4SS 包](https://github.com/KintaroModding/ue4ss/releases/tag/v3.0.1-1195-g1ceefac8)，MIT；本机下载 ZIP 已核对 GitHub 发布 SHA-256。
-- [Phantom Pact 1.4.1 原始发布包](https://github.com/yhsharaf/PhantomPact/releases/tag/v1.4.1)。仓库未附明确源码许可证；本项目不复制或改写其 Lua/C++ 源码，只通过配置接口使用用户本机安装的原始发布包。`reference` 仅是本机研究用检出，不进入发行目录。若要再分发其源码/修改版，需先明确授权。
+- [Phantom Pact 1.4.1 原始发布包](https://github.com/yhsharaf/PhantomPact/releases/tag/v1.4.1)。仓库未附明确源码许可证；本项目不打包或上传上游 Lua/C++ 文件；自有适配器复用其接口。安装脚本在备份后仅给隔离副本加加载入口和旧启发式的兼容条件，原安装不改。`reference` 仅是本机研究用检出，不进入发行目录。若要再分发其源码/修改版，需先明确授权。
 
 网络事件日志在每次运行的 `runs` 目录；邀请码单独保存，不写入常规事件日志。此版本尚未完成异地公网与真实双人战斗验证，不应视为完整 PvP 成品。
