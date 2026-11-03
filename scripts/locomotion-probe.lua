@@ -13,7 +13,8 @@ end
 local log=assert(io.open(c.output,"w"))
 local function event(kind,data)
  data=data or {};data.type=kind;data.phase=q.phase;data.wallClock=os.clock();pcall(function() data.utcMs=api.game.motionUtcMs() end)
- log:write(encode(data),"\n");log:flush()
+ -- Stamp immediately, flush with the existing 200ms observer batch; tracing must not stall every frame.
+ log:write(encode(data),"\n")
 end
 local function abilities(actor)
  local result={}
@@ -44,6 +45,7 @@ local function info(actor)
  local p=actor:K2_GetActorLocation();local cm=actor.CharacterMovement;local v=actor:GetVelocity();local rotation=actor:K2_GetActorRotation()
  local r={x=p.X,y=p.Y,z=p.Z,yaw=rotation.Yaw,vx=v.X,vy=v.Y,speed=math.sqrt(v.X*v.X+v.Y*v.Y),maxWalkSpeed=cm.MaxWalkSpeed,maxAcceleration=cm.MaxAcceleration,braking=cm.BrakingDecelerationWalking,groundFriction=cm.GroundFriction,orientToMovement=cm.bOrientRotationToMovement,controllerDesiredRotation=cm.bUseControllerDesiredRotation,useControllerYaw=actor.bUseControllerRotationYaw,feet={}}
  pcall(function() local capsule=actor.CapsuleComponent:K2_GetComponentLocation();local mesh=actor.Mesh:K2_GetComponentLocation();r.capsuleActorGap=math.sqrt((capsule.X-p.X)^2+(capsule.Y-p.Y)^2);r.meshCapsuleGapXY=math.sqrt((mesh.X-capsule.X)^2+(mesh.Y-capsule.Y)^2);r.pawnCollision=actor.CapsuleComponent:GetCollisionResponseToChannel(2) end)
+ pcall(function() r.meshSettings={updateRateOptimization=actor.Mesh.bEnableUpdateRateOptimizations,visibilityTick=actor.Mesh.VisibilityBasedAnimTickOption,perBoneMotionBlur=actor.Mesh.bPerBoneMotionBlur} end)
  pcall(function() r.acceleration=cm:GetCurrentAcceleration();r.requestedVelocity={X=cm.RequestedVelocity.X,Y=cm.RequestedVelocity.Y,Z=cm.RequestedVelocity.Z};r.hasRequestedVelocity=cm.bHasRequestedVelocity end)
  pcall(function() r.lastInput=actor:GetLastMovementInputVector() end)
  pcall(function() r.rootMotion=actor:IsPlayingRootMotion();r.gameInputMode=actor.PBZNBInput:IsGameInputMode() end)
@@ -162,7 +164,7 @@ LoopInGameThreadWithDelay(1,function()
   end
   if not q.lastSample or now-q.lastSample>=.025 then
    q.lastSample=now
-   local row={type="sample",phase=q.phase,time=now,wallClock=os.clock(),utcMs=api.game.motionUtcMs(),frame=frame,localSeq=api.net.seq,delta=api.gs():GetWorldDeltaSeconds(p),player=info(p),target=api.net.target,targetSeq=api.net.lastRemoteSeq,remoteDriver={corrections=PB0_REMOTE_LOCOMOTION.corrections,correctionFrames=PB0_REMOTE_LOCOMOTION.correctionFrames,inputSent=PB0_REMOTE_LOCOMOTION.inputSent,inputReceived=PB0_REMOTE_LOCOMOTION.inputReceived,inputRejected=PB0_REMOTE_LOCOMOTION.inputRejected,watchdogStops=PB0_REMOTE_LOCOMOTION.watchdogStops,command=PB0_REMOTE_LOCOMOTION.command or {},render=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.render or {},accepted=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.accepted or 0,reordered=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.reordered or 0,skipped=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.skipped or 0,teleports=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.teleports or 0,rootMotionYields=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.rootMotionYields or 0,movement=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.movement or "",delay=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.delay or 0,gaitHook=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitHook or false,gaitApplied=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitApplied or nil,gaitError=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitError or nil,mode=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.mode or "original",controlled=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.controlled or false,error=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.error or nil,input=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.input or {},gap=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gap or 0}}
+   local row={type="sample",phase=q.phase,time=now,wallClock=os.clock(),utcMs=api.game.motionUtcMs(),frame=frame,localSeq=api.net.seq,delta=api.gs():GetWorldDeltaSeconds(p),player=info(p),target=api.net.target,targetSeq=api.net.lastRemoteSeq,remoteDriver={singleMotion=PB0_REMOTE_LOCOMOTION.singleMotion,corrections=PB0_REMOTE_LOCOMOTION.corrections,correctionFrames=PB0_REMOTE_LOCOMOTION.correctionFrames,inputSent=PB0_REMOTE_LOCOMOTION.inputSent,inputReceived=PB0_REMOTE_LOCOMOTION.inputReceived,inputRejected=PB0_REMOTE_LOCOMOTION.inputRejected,watchdogStops=PB0_REMOTE_LOCOMOTION.watchdogStops,command=PB0_REMOTE_LOCOMOTION.command or {},render=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.render or {},accepted=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.accepted or 0,reordered=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.reordered or 0,skipped=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.skipped or 0,teleports=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.teleports or 0,rootMotionYields=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.rootMotionYields or 0,movement=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.movement or "",delay=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.delay or 0,gaitHook=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitHook or false,gaitApplied=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitApplied or nil,gaitError=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitError or nil,mode=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.mode or "original",controlled=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.controlled or false,error=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.error or nil,input=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.input or {},gap=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gap or 0}}
    if api.valid(api.net.ghost) then row.ghost=info(api.net.ghost) end
    log:write(encode(row),"\n")
   end
@@ -172,5 +174,5 @@ LoopInGameThreadWithDelay(1,function()
  return false
 end)
 q.discover()
-local inventoryOk,inventoryError=pcall(q.inventory) if not inventoryOk then event("inventory_error",{error=tostring(inventoryError)}) end
+if c.inventory then local inventoryOk,inventoryError=pcall(q.inventory) if not inventoryOk then event("inventory_error",{error=tostring(inventoryError)}) end end
 return q

@@ -3,6 +3,7 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {api,close} from './obs-control.mjs';
 import {diagnoseCapture} from './diagnose-capture.mjs';
+import {compareRender,configureMotionRender} from './render-clarity.mjs';
 const root=path.resolve('.'),base=path.join(root,'runs/videos'),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let game,run,code,foregroundSampler,recording=false;const stats=[];
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8').replace(/^\uFEFF/,''));
@@ -34,6 +35,8 @@ try{
  fs.writeFileSync(path.join(run,'capture-windows.json'),JSON.stringify(selectors));
  await waitFor('locomotion-record-ready.json',170000);
  const diagnosis=await diagnoseCapture({api,run,base,root,selectors});
+ if(process.env.PB0_RENDER_AB==='1')await compareRender({api,run,root});
+ await configureMotionRender({run,root});
  foregroundSampler=spawn('pwsh',['-NoLogo','-NoProfile','-File','scripts/sample-test-foreground.ps1','-Run',run],{cwd:root,windowsHide:true,stdio:'ignore'});
  await sleep(5000);
  const shot=await api('GetSourceScreenshot',{sourceName:'PB0 Live',imageFormat:'png',imageWidth:1920,imageHeight:1080});
@@ -51,7 +54,7 @@ try{
  }
  const output=await api('StopRecord');recording=false;
  const after=await api('GetStats');
- const result={captureDiagnosis:diagnosis,outputPath:output.outputPath,run,selectors,before,after,stats,seconds:(Date.now()-started)/1000,startedUnixMs:started,composition:'Left: host remote guest; right: guest locally driven through Enhanced Input'};
+ const result={captureDiagnosis:diagnosis,experimentalSingleMotion:process.env.PB0_EXPERIMENT_SINGLE_MOTION==='1',outputPath:output.outputPath,run,selectors,before,after,stats,seconds:(Date.now()-started)/1000,startedUnixMs:started,composition:'Left: host remote guest; right: guest locally driven through Enhanced Input'};
  fs.writeFileSync(path.join(base,'locomotion-recording.json'),JSON.stringify(result,null,2));
  fs.writeFileSync(path.join(run,'locomotion-recorder-done'),JSON.stringify({done:true}));
  console.log(JSON.stringify({type:'locomotion_video_saved',outputPath:output.outputPath}));

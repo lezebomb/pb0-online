@@ -36,6 +36,12 @@ foreach($script in @('main.lua','presentation.lua','locomotion.lua')){ $oldScrip
 Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\main.lua') -Destination (Join-Path $target 'main.lua') -Force
 Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\presentation.lua') -Destination (Join-Path $target 'presentation.lua') -Force
 Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\locomotion.lua') -Destination (Join-Path $target 'locomotion.lua') -Force
+$clock=Join-Path $project 'runs\motion-clock-build\PB0Clock.dll'
+if(Test-Path -LiteralPath $clock){
+ $clockTarget=Join-Path $target 'PB0Clock.dll'
+ if(Test-Path -LiteralPath $clockTarget){Copy-Item -LiteralPath $clockTarget -Destination (Join-Path $backup 'PB0Clock.dll')}
+ Copy-Item -LiteralPath $clock -Destination $clockTarget -Force
+}
 $text=[IO.File]::ReadAllText($modsFile)
 if($text -notmatch '(?m)^PB0CombatAdapter\s*:'){$text="PB0CombatAdapter : 0`r`n"+$text}else{$text=[regex]::Replace($text,'(?m)^PB0CombatAdapter\s*:.*$','PB0CombatAdapter : 0')}
 [IO.File]::WriteAllText($modsFile,$text)

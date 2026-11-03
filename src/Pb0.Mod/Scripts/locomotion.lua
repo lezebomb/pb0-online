@@ -15,10 +15,43 @@ return function(api)
  end
  api.game.motionClockInfo={kind="shared-UTC-anchored-monotonic",uncertaintyMs=best.span*.5+1,anchorUtcMs=best.utc}
  api.game.motionTimeMs=function() return best.offset+os.clock()*1000 end
+ -- Optional isolated helper: QPC has the same epoch/frequency in both processes on this PC.
+ local folder=debug.getinfo(1,"S").source:sub(2):match("^(.*[/\\])")
+ local marker=folder and io.open(folder.."pb0-shared-qpc-test.txt","r")
+ local sameMachineTest=marker~=nil;if marker then marker:close() end
+ local loaded,qpc=false,nil
+ if sameMachineTest then loaded,qpc=pcall(package.loadlib,folder.."PB0Clock.dll","pb0_qpc_ms") end
+ if loaded and type(qpc)=="function" then
+  local ok,a=pcall(qpc);local good,b=pcall(qpc)
+  if ok and good and finite(a) and finite(b) and b>=a and b-a<100 then
+   api.game.motionTimeMs=qpc
+   api.game.motionClockInfo={kind="Windows-QPC-shared-machine",resolutionBoundMs=0.001}
+  end
+ end
  api.game.motionUtcMs=api.game.motionTimeMs -- Compatibility name in existing recording probes.
  api.game.motionFrame=function() return system:GetFrameCount() end
  local state={version=6,mode="input-simulation-native-cmc",enabled=true,delay=0,buffer={},accepted=0,reordered=0,duplicates=0,skipped=0,teleports=0,rootMotionYields=0,updates=0,stops=0,corrections=0,correctionFrames=0,watchdogStops=0,inputSent=0,inputReceived=0,inputRejected=0,sendSeq=0}
  PB0_REMOTE_LOCOMOTION=state
+ state.version=7
+ -- Keep animated-bone velocities available to temporal rendering. Do not offset or teleport the Mesh.
+ state.singleMotion=false -- Opt-in experiment: better foot planting, worse authority drift in the short bench.
+ state.visualMotion=false
+ state.setVisualMotion=function(enabled)
+  state.visualMotion=enabled
+  local g=api.net.ghost
+  if not api.valid(g) then return end
+  local ok,err=pcall(function()
+   local mesh=g.Mesh
+   if state.visualActor~=g:GetAddress() then
+    state.visualActor=g:GetAddress()
+    state.visualOriginal={uro=mesh.bEnableUpdateRateOptimizations,tick=mesh.VisibilityBasedAnimTickOption,bones=mesh.bPerBoneMotionBlur}
+   end
+   if enabled then mesh.bEnableUpdateRateOptimizations=false else mesh.bEnableUpdateRateOptimizations=state.visualOriginal.uro end
+   mesh.VisibilityBasedAnimTickOption=enabled and 0 or state.visualOriginal.tick
+   mesh.bPerBoneMotionBlur=enabled and true or state.visualOriginal.bones
+  end)
+  state.visualError=not ok and tostring(err) or nil
+ end
  local nowMs=api.game.motionTimeMs
  local function trace(kind,data)
   if state.onTrace then data=data or {};data.kind=kind;data.utcMs=nowMs();data.mono=os.clock();state.onTrace(data) end
@@ -132,6 +165,14 @@ return function(api)
     if g:IsPlayingRootMotion() or (api.game.ghostBusy and api.game.ghostBusy(g)) then return end
     local gait=state.render and state.render.Gait
     if gait and gait>=0 and gait<=2 then anim.Gait=gait;state.gaitApplied=gait;state.gaitUpdates=(state.gaitUpdates or 0)+1 end
+    local c=state.command
+    if state.singleMotion and c and nowMs()-c.sentMs<=250 then
+     local yaw=math.rad(g:K2_GetActorRotation().Yaw)
+     local moving=norm(c.ix,c.iy)>.02
+     local ax,ay=moving and c.ax or 0,moving and c.ay or 0
+     anim.bHasAcceleration=norm(ax,ay)>2
+     anim.LocalAcceleration2D={X=ax*math.cos(yaw)+ay*math.sin(yaw),Y=-ax*math.sin(yaw)+ay*math.cos(yaw),Z=0}
+    end
    end)
    if not good then state.gaitError=tostring(err) end
   end)
@@ -150,6 +191,7 @@ return function(api)
    state.actor=g:GetAddress();state.correctX,state.correctY=0,0
    local _,p=api.getPlayer1()
    if api.valid(p) then pcall(function() cm.TurnPivotBoneInterpSpeed=p.CharacterMovement.TurnPivotBoneInterpSpeed end) end
+   state.setVisualMotion(state.visualMotion)
   end
   if (api.game.ghostBusy and api.game.ghostBusy(g)) or g:IsPlayingRootMotion() or c.root then
    state.rootMotionYields=state.rootMotionYields+1;cm.bHasRequestedVelocity=false;state.correcting=false
@@ -193,15 +235,22 @@ return function(api)
    local vx,vy=c.vx or 0,c.vy or 0
    local acceleration=norm(c.ax or 0,c.ay or 0)
    local max=math.max(c.max,norm(vx,vy))
-   local px,py=vx+(c.ax or 0)*horizon,vy+(c.ay or 0)*horizon
+   local physical=state.singleMotion and norm(vx,vy)>3
+   local ax,ay=physical and (c.bx or 0) or (c.ax or 0),physical and (c.by or 0) or (c.ay or 0)
+   local px,py=vx+ax*horizon,vy+ay*horizon
    local speed=norm(px,py)
    if speed>max then px,py=px*max/speed,py*max/speed end
    state.simVX,state.simVY=px+state.correctX,py+state.correctY
    -- Native request movement keeps the physical capsule and mesh on one swept Character.
    cm.RequestedVelocity={X=state.simVX,Y=state.simVY,Z=0}
    cm.bRequestedMoveWithMaxSpeed=false;cm.bRequestedMoveUseAcceleration=false;cm.bHasRequestedVelocity=true
-   local magnitude=norm(c.ax or 0,c.ay or 0)
-   if magnitude>2 then g:AddMovementInput({X=c.ax/magnitude,Y=c.ay/magnitude,Z=0},clamp(magnitude/c.accel,0,1),false) end
+   -- RequestedVelocity already drives the CMC. AddMovementInput here accelerates a second time.
+   -- The animation hook supplies intent without introducing a second physical controller.
+   if state.singleMotion then g:ConsumeMovementInputVector()
+   else
+    local magnitude=norm(c.ax or 0,c.ay or 0)
+    if magnitude>2 then g:AddMovementInput({X=c.ax/magnitude,Y=c.ay/magnitude,Z=0},clamp(magnitude/c.accel,0,1),false) end
+   end
    state.stopped=false;state.driveSpeed=norm(state.simVX,state.simVY)
   else
    state.movement="idle";state.correcting=false;state.correctX,state.correctY=0,0

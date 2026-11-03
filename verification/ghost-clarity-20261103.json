@@ -1,0 +1,233 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "FullGoalPassed": false,
+  "MovementCandidateAccepted": false,
+  "DefaultMovementRestoredToPreviousBehavior": true,
+  "RetainedChanges": [
+    "Session-only motion blur amount 0.15; original TSR AA=4 and motion-blur quality 3 retained",
+    "Reversible render A/B, explicit experimental movement switch (off by default)",
+    "Project-local QPC helper for same-machine recording only; normal sessions retain previous clock",
+    "Batch trace flushing instead of per-event synchronous flush; skip repeated movement inventory"
+  ],
+  "RenderingEvidence": {
+    "OriginalAA": 4,
+    "OriginalMotionBlurQuality": 3,
+    "OriginalPerBoneVelocity": true,
+    "OriginalUpdateRateOptimization": false,
+    "NoBlurObservedClearer": true,
+    "FXAANotRetained": "Visible aliasing; no permanent downgrade",
+    "MissingBoneVelocityNotProven": true,
+    "ResidualTSRHistoryNotExcluded": true
+  },
+  "ExperimentMeasurements": {
+    "MotionLagMs": {
+      "before": {
+        "start": {
+          "n": 3,
+          "p50": 56.0,
+          "p95": 66.8
+        },
+        "stop": {
+          "n": 3,
+          "p50": 4.0,
+          "p95": 6.699999999999999
+        }
+      },
+      "after": {
+        "start": {
+          "n": 3,
+          "p50": 39.01240003108978,
+          "p95": 54.09901002645493
+        },
+        "stop": {
+          "n": 3,
+          "p50": 21.50309991836548,
+          "p95": 35.37993000745773
+        }
+      }
+    },
+    "PipelineStages": {
+      "nativeInputInjectionToGhostMs": {
+        "n": 3,
+        "p50": 316.06729996204376,
+        "p95": 346.00166001319883
+      },
+      "inputEventAppendToHostDispatchMs": {
+        "n": 219,
+        "p50": 23.153900027275085,
+        "p95": 36.44360004663467
+      },
+      "hostReceiveToGameThreadApplyMs": {
+        "n": 519,
+        "p50": 0.32679998874664307,
+        "p95": 0.6453299760818477
+      },
+      "appliedByOrigin": {
+        "event": 60,
+        "snapshot": 459
+      },
+      "injectedMoveOrStopToFirstAppendMs": {
+        "n": 6,
+        "p50": 12.629649937152863,
+        "p95": 18.085525035858154
+      },
+      "lastGameThreadApplyToMotionOnsetMs": {
+        "n": 3,
+        "p50": 3.6582000255584717,
+        "p95": 7.094039928913116
+      }
+    },
+    "PositionAndVelocityErrors": {
+      "before": {
+        "forward": {
+          "positionCm": {
+            "n": 70,
+            "p50": 0.768840352368187,
+            "p95": 3.2181077861780727
+          },
+          "velocityCmPerSec": {
+            "n": 70,
+            "p50": 0.0,
+            "p95": 58.584082607530114
+          }
+        },
+        "lateral": {
+          "positionCm": {
+            "n": 46,
+            "p50": 0.768840352368187,
+            "p95": 4.500102761850318
+          },
+          "velocityCmPerSec": {
+            "n": 46,
+            "p50": 0.0,
+            "p95": 25.158298815763494
+          }
+        },
+        "turn": {
+          "positionCm": {
+            "n": 90,
+            "p50": 0.739772597159591,
+            "p95": 1.872551599998435
+          },
+          "velocityCmPerSec": {
+            "n": 90,
+            "p50": 0.0,
+            "p95": 19.820142863562943
+          }
+        }
+      },
+      "after": {
+        "forward": {
+          "positionCm": {
+            "n": 74,
+            "p50": 4.753481194804428,
+            "p95": 5.5903332797106735
+          },
+          "velocityCmPerSec": {
+            "n": 74,
+            "p50": 0.0,
+            "p95": 44.5204081312758
+          }
+        },
+        "lateral": {
+          "positionCm": {
+            "n": 60,
+            "p50": 8.180717042185046,
+            "p95": 10.997652832676845
+          },
+          "velocityCmPerSec": {
+            "n": 60,
+            "p50": 0.0,
+            "p95": 18.364290388577647
+          }
+        },
+        "turn": {
+          "positionCm": {
+            "n": 92,
+            "p50": 3.7979849221860817,
+            "p95": 10.997652832676845
+          },
+          "velocityCmPerSec": {
+            "n": 92,
+            "p50": 0.0,
+            "p95": 28.60811046500973
+          }
+        }
+      }
+    },
+    "Corrections": {
+      "before": {
+        "corrections": 0,
+        "correctionFrames": 0,
+        "teleports": 0
+      },
+      "after": {
+        "corrections": 3,
+        "correctionFrames": 45,
+        "teleports": 0
+      }
+    },
+    "OrdinaryAttackApplyMs": 72.11239993572235,
+    "FPS": {
+      "host": 56.985,
+      "guest": 55.044
+    },
+    "FrameIntervalMs": {
+      "host": [
+        18.00000004004687,
+        26.000000070780516
+      ],
+      "guest": [
+        18.999999971129,
+        26.850000012200233
+      ]
+    },
+    "StateSendHz": {
+      "host": 30.308561360312194,
+      "guest": 30.3059021910347
+    },
+    "AcceptedReceiveHz": {
+      "host": 29.07376811970688,
+      "guest": 28.97863640164632
+    },
+    "CapsuleActorGapMaxCm": 0.0,
+    "MeshCapsuleXYGapMaxCm": 0.0,
+    "PawnCollision": [
+      2
+    ],
+    "Clock": "Windows QPC, shared machine epoch, 10000000 Hz",
+    "NativeSocketReceiveToLuaDispatchMs": null,
+    "ClockCaveat": "Raw QPC enabled only by an owned same-machine test marker; not a cross-computer clock",
+    "TimingCaveat": "Three starts/stops; before uses 25-40ms sampling. Lua receive is game-thread dispatch, not native socket receive. Candidate metrics do not describe rolled-back default movement."
+  },
+  "Video": {
+    "Filename": "PB0-GhostClarity-20261103-191719.mp4",
+    "RenderABFilename": "PB0-GhostClarity-20261103-190831.mp4",
+    "Seconds": 18.133333333333333,
+    "Width": 1920,
+    "Height": 1080,
+    "FPS": 60,
+    "ActualGameSourceResolution": [
+      1280,
+      720
+    ],
+    "VisualReview": true,
+    "HorizontalSeamCandidates": {
+      "host": 0,
+      "guest": 0
+    },
+    "OBS": {
+      "renderDropped": 0,
+      "encoderDropped": 0
+    },
+    "Caveat": "Final clip includes the rejected single-motion experiment. It demonstrates rendering/foot motion improvements, not overall movement acceptance."
+  },
+  "Cleanup": {
+    "PlayRestored": true,
+    "PersonalSaveFilesHashMatched": 26,
+    "PrivateGraphicsRestored": true,
+    "OwnedProcessesRemaining": 0
+  },
+  "Next": "Preserve the improved foot intent while reconciling startup/braking displacement; then timestamp Root Motion phases and validate hit authority. Do not enable the single-motion experiment by default."
+}

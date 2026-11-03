@@ -32,6 +32,7 @@ function launch(name,host,invite){
  const mod=path.join(gameRoot,'platform/steam/ue4ss/Mods/PBZCoop'),probeId=crypto.randomUUID();
  const p={name,gameRoot,mod,probeId,rows:[],events:[],offset:0,partial:'',buffer:'',telemetry:path.join(run,name+'-observations.jsonl')};players[name]=p;
  p.devCreated=!fs.existsSync(path.join(mod,'dev.txt'));if(p.devCreated)fs.writeFileSync(path.join(mod,'dev.txt'),'PB0 isolated dual test');fs.writeFileSync(path.join(mod,'cmd.txt'),'');
+ if(locomotion){p.qpcMarker=path.join(gameRoot,'platform/steam/ue4ss/Mods/PB0CombatAdapter/Scripts/pb0-shared-qpc-test.txt');p.qpcCreated=!fs.existsSync(p.qpcMarker);if(p.qpcCreated)fs.writeFileSync(p.qpcMarker,'Same-machine bounded recording only');}
  const params=[host?'host':'join','--json','--root',root,'--local','--game-root',gameRoot,'--run-dir',path.join(run,name),'--allow-isolated-games','--duration',locomotion?'480':'300','--launch-game',host?'--invite-out':'--invite-file',invite];
  p.child=spawn(path.join(root,'dist/PB0/PB0.exe'),params,{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe']});
  p.child.stdout.on('data',b=>{p.buffer+=b.toString();let i;while((i=p.buffer.indexOf('\n'))>=0){const line=p.buffer.slice(0,i);p.buffer=p.buffer.slice(i+1);try{const e=JSON.parse(line);p.events.push(e);if(e.type==='game_started'){p.pid=e.data.pid;p.gameStartedAt=Date.now();report('real_game_started',{name,pid:p.pid});}}catch{}}});
@@ -95,5 +96,5 @@ finally{
  pump();result.finishedAt=new Date().toISOString();result.players=Object.fromEntries(Object.values(players).map(p=>[p.name,{pid:p.pid,gameRoot:p.gameRoot,telemetry:p.telemetry}]));
  fs.writeFileSync(path.join(run,'result.json'),JSON.stringify(result,null,2));report('result',result);
  for(const p of Object.values(players)){try{await command(p,'if PB0_LOCO then PB0_LOCO.stop() end if PB0_TEST then PB0_TEST.release() PB0_TEST.stop() end');}catch{}try{p.child.stdin.write('quit\n');}catch{}}
- await sleep(1800);for(const p of Object.values(players)){if(p.exit===undefined)p.child.kill();if(p.devCreated)fs.rmSync(path.join(p.mod,'dev.txt'),{force:true});}
+ await sleep(1800);for(const p of Object.values(players)){if(p.exit===undefined)p.child.kill();if(p.devCreated)fs.rmSync(path.join(p.mod,'dev.txt'),{force:true});if(p.qpcCreated)fs.rmSync(p.qpcMarker,{force:true});}
 }

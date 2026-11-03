@@ -34,6 +34,7 @@ module=lua.eval('function(s) return assert(load(s))() end')((root/'src/Pb0.Mod/S
 module(lua.globals().api)
 lua.execute("""
 local state=PB0_REMOTE_LOCOMOTION
+assert(not state.singleMotion,"regressed movement experiment must stay off by default")
 assert(api.game.motionClockInfo.uncertaintyMs<=2)
 api.game.publishMotionInput()
 assert(#sent==1 and sent[1][1]=="W")
@@ -44,7 +45,9 @@ assert(state.inputReceived==1)
 local t={X=0,Y=0,Z=0,Yaw=0,Speed=0,SourceUtcMs=stamp,SourceTime=clock,VelX=0,VelY=0,InputX=1,InputY=0,WalkMax=100,AccelMax=500,Gait=0,MoveMode=1,AccelX=500,AccelY=0}
 assert(api.game.acceptRemoteMotion(t,1));api.net.target=t;api.net.lastRemoteSeq=1
 api.game.steerRemote(api.net)
-assert(g.adds==1 and g.amount==1)
+assert(g.adds==1,"default retains the previously verified movement path")
+state.singleMotion=true;frame=frame+1;api.game.steerRemote(api.net)
+assert(g.adds==1 and cm.bHasRequestedVelocity,"experimental request cannot add a second physical input")
 local n=g.adds;api.game.steerRemote(api.net);assert(g.adds==n,"one update per engine frame")
 clock=clock+.02;frame=frame+1
 local fresh=api.game.motionTimeMs()

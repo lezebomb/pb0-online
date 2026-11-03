@@ -11,7 +11,7 @@ if(Get-CimInstance Win32_Process -Filter "Name='obs64.exe'" | Where-Object {$_.E
 $profile=Join-Path $obsRoot 'config\obs-studio\basic\profiles\PB0Record\basic.ini'
 Copy-Item -LiteralPath $profile -Destination (Join-Path $base 'obs-before-quality.ini') -Force
 $ini=[IO.File]::ReadAllText($profile)
-foreach($pair in @(@('BaseCX','1920'),@('BaseCY','1080'),@('OutputCX','1920'),@('OutputCY','1080'),@('FPSCommon','60'),@('FPSInt','60'),@('FPSNum','60'),@('RecQuality','HQ'),@('RecEncoder','nvenc'),@('FilenameFormatting','PB0-InputSimulation-%CCYY%MM%DD-%hh%mm%ss'))){
+foreach($pair in @(@('BaseCX','1920'),@('BaseCY','1080'),@('OutputCX','1920'),@('OutputCY','1080'),@('FPSCommon','60'),@('FPSInt','60'),@('FPSNum','60'),@('RecQuality','HQ'),@('RecEncoder','nvenc'),@('FilenameFormatting','PB0-GhostClarity-%CCYY%MM%DD-%hh%mm%ss'))){
  $ini=[regex]::Replace($ini,('(?m)^'+$pair[0]+'=.*$'),($pair[0]+'='+$pair[1]))
 }
 [IO.File]::WriteAllText($profile,$ini)

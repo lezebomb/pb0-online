@@ -49,6 +49,31 @@ end
 function q.mark(stage)
  q.stage=stage;q.markTime=nil;q.markFrame=nil
 end
+-- Reversible render-only A/B. No changes to networking, actors, input, collision or saved user settings.
+local renderNames={"r.AntiAliasingMethod","r.MotionBlurQuality","r.MotionBlur.Max","r.MotionBlur.Amount","r.TemporalAACurrentFrameWeight","r.TSR.ShadingRejection.Flickering","r.VelocityOutputPass","r.Velocity.EnableVertexDeformation"}
+local function renderValues()
+ local values={}
+ for _,name in ipairs(renderNames) do values[name]=system:GetConsoleVariableFloatValue(name) end
+ return values
+end
+function q.rendering(mode)
+ local pc=context();q.originalRender=q.originalRender or renderValues()
+ if PB0_REMOTE_LOCOMOTION then PB0_REMOTE_LOCOMOTION.setVisualMotion(mode=="velocity") end
+ local function set(name,value) system:ExecuteConsoleCommand(pc,name.." "..tostring(value),pc) end
+ for _,name in ipairs({"r.AntiAliasingMethod","r.MotionBlurQuality","r.MotionBlur.Max","r.MotionBlur.Amount"}) do set(name,q.originalRender[name]) end
+ if mode=="no-blur" or mode=="fxaa" then set("r.MotionBlurQuality",0);set("r.MotionBlur.Max",0) end
+ if mode=="fxaa" then set("r.AntiAliasingMethod",1) end
+ if mode=="combat" then set("r.MotionBlur.Amount",.15) end
+ local values=renderValues();local f=assert(io.open(c.root.."/render-"..mode..".json","w"))
+ local entries={'"mode":"'..mode..'"','"clockKind":"'..api.game.motionClockInfo.kind..'"'}
+ if PB0_REMOTE_LOCOMOTION then
+  entries[#entries+1]='"visualError":"'..tostring(PB0_REMOTE_LOCOMOTION.visualError or "")..'"'
+  local old=PB0_REMOTE_LOCOMOTION.visualOriginal
+  if old then entries[#entries+1]=string.format('"originalURO":%s,"originalVisibilityTick":%d,"originalPerBoneVelocity":%s',tostring(old.uro),old.tick,tostring(old.bones)) end
+ end
+ for name,value in pairs(values) do entries[#entries+1]=string.format('"%s":%.6f',name,value) end
+ f:write("{"..table.concat(entries,",").."}");f:close();return values
+end
 function q.flush()
  if #q.buffer>0 then frames:write(table.concat(q.buffer));q.buffer={};frames:flush() end
  if #q.motion>0 then motion:write(table.concat(q.motion));q.motion={};motion:flush() end

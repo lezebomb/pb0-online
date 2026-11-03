@@ -10,6 +10,7 @@ export async function runLocomotion(c){
  await command(host,'local pc,p=PBZ.getPlayer1() p:K2_SetActorRotation({Pitch=0,Yaw=90,Roll=0},false) pc:SetControlRotation({Pitch=-8,Yaw=90,Roll=0})');
  await command(guest,'local pc,p=PBZ.getPlayer1() p:K2_SetActorLocationAndRotation({X='+(a.x+180)+',Y='+a.y+',Z='+a.z+'},{Pitch=0,Yaw=90,Roll=0},false,{},true) pc:SetControlRotation({Pitch=-8,Yaw=90,Roll=0})');
  for(const p of [host,guest]){
+  await command(p,'PB0_REMOTE_LOCOMOTION.singleMotion='+String(process.env.PB0_EXPERIMENT_SINGLE_MOTION==='1'));
   await command(p,'PB0_QUALITY_CONFIG={root='+file(p.name)+'} PB0_QUALITY=dofile('+lua('quality-probe.lua')+') PB0_QUALITY.resolution('+'1280,720'+')');
   await command(p,'PB0_LOCO_CONFIG={output='+file(p.name+'-locomotion.jsonl')+',status='+file(p.name+'-input.json')+'} PB0_LOCO=dofile('+lua('locomotion-probe.lua')+')');
  }
@@ -47,7 +48,7 @@ export async function runLocomotion(c){
  await command(guest,'local g=PBZ.net.ghost g:K2_SetActorLocation({X='+a.x+',Y='+a.y+',Z='+a.z+'},false,{},true) g.CharacterMovement:StopMovementImmediately() PB0_REMOTE_LOCOMOTION.resetAfterAlignment()');
  await sleep(1700);
  for(const p of [host,guest])await command(p,'PB0_LOCO.presentationDiagnosticReady=true');
- fs.writeFileSync(path.join(run,'locomotion-record-ready.json'),JSON.stringify({run,width:1920,height:1080,hostPid:host.pid,guestPid:guest.pid}));
+ fs.writeFileSync(path.join(run,'locomotion-record-ready.json'),JSON.stringify({run,width:1920,height:1080,hostPid:host.pid,guestPid:guest.pid,forwardAxis,lateralAxis}));
  report('locomotion_record_ready',{run});
  await until(()=>fs.existsSync(path.join(run,'locomotion-start')),150000,'actual game framing and recorder cue');
  const began=Date.now(),at=async(s)=>{while(Date.now()-began<s*1000&&!stopped()){pump();await sleep(40);}if(stopped())throw Error('Locomotion showcase stopped');};
