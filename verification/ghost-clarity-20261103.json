@@ -229,5 +229,6 @@
     "PrivateGraphicsRestored": true,
     "OwnedProcessesRemaining": 0
   },
-  "Next": "Preserve the improved foot intent while reconciling startup/braking displacement; then timestamp Root Motion phases and validate hit authority. Do not enable the single-motion experiment by default."
+  "Next": "Preserve the improved foot intent while reconciling startup/braking displacement; then timestamp Root Motion phases and validate hit authority. Do not enable the single-motion experiment by default.",
+  "GaitVisualAssessmentCorrection": "Previous foot-plant metric did not establish gait recovery. Rejected video shows nearly fixed inter-foot pose (forward/strafe range 1.18/0.63 cm); native input and CMC acceleration are zero. Superseded by gait-recovery-20261103.json."
 }

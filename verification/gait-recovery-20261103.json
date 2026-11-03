@@ -1,0 +1,182 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "GaitRecoveryAccepted": true,
+  "NewSingleDriverAccepted": false,
+  "FailedExperimentRemoved": true,
+  "Adapter": {
+    "version": 8,
+    "mode": "restored-native-input",
+    "BothRuntimeModesVerified": true,
+    "InheritedExperimentFlagIgnoredInActualRun": true
+  },
+  "Cause": "Failed path consumed real movement input while RequestedVelocity still moved the capsule. Actual input and CMC acceleration were zero; manually writing two animation fields did not reconstruct native locomotion.",
+  "Changes": [
+    "Remove singleMotion branch and its environment activation path",
+    "Restore validated RequestedVelocity + native AddMovementInput behavior; do not consume walking input",
+    "Remove forged bHasAcceleration / LocalAcceleration2D assignments; keep native Gait hook",
+    "Verify loaded mode before recording; add root-relative and inter-foot gait evidence",
+    "Preserve WGC, QPC, blur reduction and combat events"
+  ],
+  "DoublePhysicalDriveEliminated": false,
+  "SingleDriverDecision": "No replacement enabled; retain validated native-input combination until a complete native locomotion integration is verified.",
+  "Feet": {
+    "Definition": "Root-relative local coordinates and left-minus-right foot vector during speed >25cm/s; visual sequence reviewed separately",
+    "RejectedInterFootForwardRangeCm": {
+      "forward": 1.1805315611886158,
+      "lateral": 0.6258341204143818,
+      "turn": 0.20892644822508544
+    },
+    "RecoveredInterFootForwardRangeCm": {
+      "forward": 111.59024787998351,
+      "lateral": 96.55905971999164,
+      "turn": 69.37460664997343
+    },
+    "InputMagnitudeMedian": {
+      "forward": 1.0,
+      "lateral": 1.0,
+      "turn": 1.0
+    },
+    "ActualAccelerationMedian": {
+      "forward": 500.0,
+      "lateral": 500.0,
+      "turn": 500.0
+    },
+    "AnimationRateScale": 1,
+    "ActorVsCMCVelocityErrorMax": 0,
+    "VisualReview": "HOST and GUEST forward/strafe/turn consecutive foot frames show alternating steps, lift and recovery; fixed-leg regression gone. Existing imperfect sliding/phase matching remains."
+  },
+  "Measurements": {
+    "FrameEdgeLatencyMs": {
+      "baseline": {
+        "start": {
+          "p50": 38.0,
+          "p95": 52.4
+        },
+        "stop": {
+          "p50": 16.0,
+          "p95": 19.6
+        }
+      },
+      "current": {
+        "start": {
+          "p50": 47.823400020599365,
+          "p95": 62.490699958801265
+        },
+        "stop": {
+          "p50": 14.213099956512451,
+          "p95": 18.95681995153427
+        }
+      }
+    },
+    "SparseSampleLatencyMs": {
+      "before": {
+        "start": {
+          "n": 3,
+          "p50": 56.0,
+          "p95": 66.8
+        },
+        "stop": {
+          "n": 3,
+          "p50": 4.0,
+          "p95": 6.699999999999999
+        }
+      },
+      "after": {
+        "start": {
+          "n": 3,
+          "p50": 26.912999987602234,
+          "p95": 77.7751500725746
+        },
+        "stop": {
+          "n": 3,
+          "p50": 17.54609990119934,
+          "p95": 42.50741999149322
+        }
+      }
+    },
+    "TimingCaveat": "Three actions only. Frame edges compare same per-engine-frame observer on both runs. Sparse 25-40ms sampling can give different stop estimates. No latency improvement claimed; start approximately 10ms slower.",
+    "PositionP95Cm": {
+      "before": {
+        "forward": 3.2181077861780727,
+        "lateral": 4.500102761850318,
+        "turn": 1.872551599998435
+      },
+      "after": {
+        "forward": 3.9057036605617883,
+        "lateral": 3.617520721947405,
+        "turn": 2.3735017210838687
+      }
+    },
+    "Corrections": {
+      "before": {
+        "corrections": 0,
+        "correctionFrames": 0,
+        "teleports": 0
+      },
+      "after": {
+        "corrections": 0,
+        "correctionFrames": 0,
+        "teleports": 0
+      }
+    },
+    "StoppedTail": {
+      "stop-one": {
+        "maxSpeed": 0.0,
+        "travelCm": 0.0
+      },
+      "stop-two": {
+        "maxSpeed": 0.0,
+        "travelCm": 0.0
+      },
+      "stop-three": {
+        "maxSpeed": 0.0,
+        "travelCm": 0.0
+      }
+    },
+    "FPS": {
+      "host": 47.69053117797014,
+      "guest": 44.405897658175135
+    },
+    "FrameIntervalP50P95Ms": {
+      "host": [
+        20.99999994970858,
+        30.999999959021807
+      ],
+      "guest": [
+        21.999999997206032,
+        32.00000000651926
+      ]
+    },
+    "CapsuleActorGapMaxCm": 0,
+    "MeshCapsuleXYGapMaxCm": 0,
+    "OrdinaryAttackAppliedMs": 101.21430003643036,
+    "OrdinaryAttackVisualReview": true,
+    "FullCombatRetested": false
+  },
+  "Video": {
+    "Filename": "PB0-GaitRecovery-20261103-194639.mp4",
+    "Seconds": 17.716666666666665,
+    "Width": 1920,
+    "Height": 1080,
+    "FPS": 60,
+    "ActualGameViewport": [
+      1280,
+      720
+    ],
+    "OBSRenderDropped": 0,
+    "OBSEncoderDropped": 0,
+    "HorizontalSeamCandidates": {
+      "host": 0,
+      "guest": 0
+    },
+    "VisualReview": true,
+    "AcceptanceScope": "Recovery of previously working gait, stop and position accuracy. Not a new single-driver or complete synchronization acceptance."
+  },
+  "Cleanup": {
+    "PlayRestored": true,
+    "PersonalFilesHashMatched": 26,
+    "OwnedProcessesRemaining": 0,
+    "PrivateGraphicsRestored": true
+  }
+}

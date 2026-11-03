@@ -11,7 +11,7 @@ os.clock=function() return clock end
 sys={GetFrameCount=function() return frame end}
 mathlib={UtcNow=function() return clock end,ToUnixTimestamp=function(_,t) return 1700000000+math.floor(t) end,GetMillisecond=function(_,t) return math.floor(t*1000)%1000 end}
 StaticFindObject=function(path) return path:find("KismetMath") and mathlib or sys end
-RegisterHook=function() return 1,2 end
+RegisterHook=function(_,callback) gaitHook=callback;return 1,2 end
 cm={Velocity={X=0,Y=0,Z=0},MaxWalkSpeed=100,MaxAcceleration=500,MovementMode=1,GroundFriction=5}
 function cm:GetCurrentAcceleration() return {X=500,Y=0,Z=0} end
 function cm:StopMovementImmediately() self.Velocity={X=0,Y=0,Z=0} end
@@ -23,7 +23,8 @@ function g:K2_SetActorLocationAndRotation(p,r) self.pos=p end
 function g:GetVelocity() return cm.Velocity end
 function g:GetLastMovementInputVector() return {X=1,Y=0,Z=0} end
 function g:GetLocomotionDriverComponent() return {GetCurrentMoveInputWorldSpace=function() return {X=.06666667,Y=0,Z=0} end} end
-g.Mesh={GetAnimInstance=function() return {Gait=0} end}
+anim=setmetatable({Gait=0,TryGetPawnOwner=function() return g end},{__newindex=function(t,k,v) assert(k~="bHasAcceleration" and k~="LocalAcceleration2D","native animation acceleration cannot be forged");rawset(t,k,v) end})
+g.Mesh={GetAnimInstance=function() return anim end}
 function g:IsPlayingRootMotion() return self.root or false end
 function g:ConsumeMovementInputVector() end
 function g:AddMovementInput(v,s) self.adds=self.adds+1;self.input=v;self.amount=s end
@@ -34,7 +35,7 @@ module=lua.eval('function(s) return assert(load(s))() end')((root/'src/Pb0.Mod/S
 module(lua.globals().api)
 lua.execute("""
 local state=PB0_REMOTE_LOCOMOTION
-assert(not state.singleMotion,"regressed movement experiment must stay off by default")
+assert(state.singleMotion==nil and state.mode=="restored-native-input","failed movement mode must be removed")
 assert(api.game.motionClockInfo.uncertaintyMs<=2)
 api.game.publishMotionInput()
 assert(#sent==1 and sent[1][1]=="W")
@@ -46,8 +47,9 @@ local t={X=0,Y=0,Z=0,Yaw=0,Speed=0,SourceUtcMs=stamp,SourceTime=clock,VelX=0,Vel
 assert(api.game.acceptRemoteMotion(t,1));api.net.target=t;api.net.lastRemoteSeq=1
 api.game.steerRemote(api.net)
 assert(g.adds==1,"default retains the previously verified movement path")
-state.singleMotion=true;frame=frame+1;api.game.steerRemote(api.net)
-assert(g.adds==1 and cm.bHasRequestedVelocity,"experimental request cannot add a second physical input")
+anim.Gait=2;gaitHook({get=function() return anim end})
+assert(not state.gaitError,"gait hook must not attempt forbidden animation-state writes")
+assert(anim.Gait==0 and anim.bHasAcceleration==nil and anim.LocalAcceleration2D==nil)
 local n=g.adds;api.game.steerRemote(api.net);assert(g.adds==n,"one update per engine frame")
 clock=clock+.02;frame=frame+1
 local fresh=api.game.motionTimeMs()

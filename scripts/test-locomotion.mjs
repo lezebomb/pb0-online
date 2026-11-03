@@ -10,11 +10,11 @@ export async function runLocomotion(c){
  await command(host,'local pc,p=PBZ.getPlayer1() p:K2_SetActorRotation({Pitch=0,Yaw=90,Roll=0},false) pc:SetControlRotation({Pitch=-8,Yaw=90,Roll=0})');
  await command(guest,'local pc,p=PBZ.getPlayer1() p:K2_SetActorLocationAndRotation({X='+(a.x+180)+',Y='+a.y+',Z='+a.z+'},{Pitch=0,Yaw=90,Roll=0},false,{},true) pc:SetControlRotation({Pitch=-8,Yaw=90,Roll=0})');
  for(const p of [host,guest]){
-  await command(p,'PB0_REMOTE_LOCOMOTION.singleMotion='+String(process.env.PB0_EXPERIMENT_SINGLE_MOTION==='1'));
   await command(p,'PB0_QUALITY_CONFIG={root='+file(p.name)+'} PB0_QUALITY=dofile('+lua('quality-probe.lua')+') PB0_QUALITY.resolution('+'1280,720'+')');
   await command(p,'PB0_LOCO_CONFIG={output='+file(p.name+'-locomotion.jsonl')+',status='+file(p.name+'-input.json')+'} PB0_LOCO=dofile('+lua('locomotion-probe.lua')+')');
  }
  await until(()=>ready(host).ready&&ready(guest).ready,8000,'actual IA_Move and matching Enhanced Input subsystem');
+ for(const p of [host,guest])if(ready(p).driver?.version!==8||ready(p).driver?.mode!=='restored-native-input')throw Error(p.name+' did not load the restored movement adapter');
  const setPhase=async(name)=>{for(const p of [host,guest])await command(p,'PB0_LOCO.phaseTo('+JSON.stringify(name)+')');};
  for(const p of [host,guest])await command(p,'PB0_LOCO_CONFIG.subject="'+(p===host?'remote':'local')+'" PB0_LOCO_CAMERA=dofile('+lua('locomotion-camera.lua')+')');
  await sleep(8000);
@@ -60,7 +60,7 @@ export async function runLocomotion(c){
  await setPhase('turn');await command(guest,'PB0_LOCO.move('+turnAxis[0]+','+turnAxis[1]+',1.25)');await at(11);
  await setPhase('stop-three');await at(13);
  await setPhase('attack');await command(guest,'PB0_TEST.attackOnce(false)');await at(16);
- await setPhase('idle-final');await at(18);
+ await setPhase('idle-final');await at(17.5);
  for(const p of [host,guest])await command(p,'PB0_QUALITY.capture=false PB0_QUALITY.finish()');
  result.ok=true;result.locomotion={seconds:(Date.now()-began)/1000,source:'two real games, actual guest IA_JoystickMoveInput; input-command remote simulation with authoritative corrections',phases:['forward','lateral','stops','turn','one attack'],combatAssertionsRepeated:false};
  fs.writeFileSync(path.join(run,'locomotion-done.json'),JSON.stringify(result.locomotion));report('locomotion_complete',result.locomotion);

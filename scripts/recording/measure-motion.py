@@ -1,5 +1,5 @@
 from pathlib import Path
-import json,numpy as np,csv
+import json,numpy as np,csv,sys
 b=Path(__file__).resolve().parents[2]/'runs/videos';m=json.loads((b/'locomotion-recording.json').read_text());r=Path(m['run']);old=b.parent/'locomotion-game-1793697633394'
 phases=['forward','lateral','turn']
 def read(r,role):
@@ -76,5 +76,6 @@ for name,folder in [('before',old),('after',r)]:
   a=[x for x in samples if x['phase']==phase]
   out['movementErrors'][name][phase]={'positionCm':pct([np.hypot(x['target']['X']-x['ghost']['x'],x['target']['Y']-x['ghost']['y']) for x in a]),'velocityCmPerSec':pct([np.hypot(x['target']['VelX']-x['ghost']['vx'],x['target']['VelY']-x['ghost']['vy']) for x in a])}
  out.setdefault('correctionsBeforeAfter',{})[name]={k:samples[-1]['remoteDriver'][k]-samples[0]['remoteDriver'][k] for k in ['corrections','correctionFrames','teleports']}
-(b/'ghost-clarity-latency.json').write_text(json.dumps(out,indent=2),encoding='utf-8')
+output=Path(sys.argv[1]) if len(sys.argv)>1 else b/'ghost-clarity-latency.json'
+output.write_text(json.dumps(out,indent=2),encoding='utf-8')
 print(json.dumps(out,indent=2))

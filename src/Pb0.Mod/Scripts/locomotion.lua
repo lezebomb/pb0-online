@@ -32,9 +32,9 @@ return function(api)
  api.game.motionFrame=function() return system:GetFrameCount() end
  local state={version=6,mode="input-simulation-native-cmc",enabled=true,delay=0,buffer={},accepted=0,reordered=0,duplicates=0,skipped=0,teleports=0,rootMotionYields=0,updates=0,stops=0,corrections=0,correctionFrames=0,watchdogStops=0,inputSent=0,inputReceived=0,inputRejected=0,sendSeq=0}
  PB0_REMOTE_LOCOMOTION=state
- state.version=7
+ state.version=8
+ state.mode="restored-native-input"
  -- Keep animated-bone velocities available to temporal rendering. Do not offset or teleport the Mesh.
- state.singleMotion=false -- Opt-in experiment: better foot planting, worse authority drift in the short bench.
  state.visualMotion=false
  state.setVisualMotion=function(enabled)
   state.visualMotion=enabled
@@ -165,14 +165,6 @@ return function(api)
     if g:IsPlayingRootMotion() or (api.game.ghostBusy and api.game.ghostBusy(g)) then return end
     local gait=state.render and state.render.Gait
     if gait and gait>=0 and gait<=2 then anim.Gait=gait;state.gaitApplied=gait;state.gaitUpdates=(state.gaitUpdates or 0)+1 end
-    local c=state.command
-    if state.singleMotion and c and nowMs()-c.sentMs<=250 then
-     local yaw=math.rad(g:K2_GetActorRotation().Yaw)
-     local moving=norm(c.ix,c.iy)>.02
-     local ax,ay=moving and c.ax or 0,moving and c.ay or 0
-     anim.bHasAcceleration=norm(ax,ay)>2
-     anim.LocalAcceleration2D={X=ax*math.cos(yaw)+ay*math.sin(yaw),Y=-ax*math.sin(yaw)+ay*math.cos(yaw),Z=0}
-    end
    end)
    if not good then state.gaitError=tostring(err) end
   end)
@@ -235,22 +227,17 @@ return function(api)
    local vx,vy=c.vx or 0,c.vy or 0
    local acceleration=norm(c.ax or 0,c.ay or 0)
    local max=math.max(c.max,norm(vx,vy))
-   local physical=state.singleMotion and norm(vx,vy)>3
-   local ax,ay=physical and (c.bx or 0) or (c.ax or 0),physical and (c.by or 0) or (c.ay or 0)
-   local px,py=vx+ax*horizon,vy+ay*horizon
+   local px,py=vx+(c.ax or 0)*horizon,vy+(c.ay or 0)*horizon
    local speed=norm(px,py)
    if speed>max then px,py=px*max/speed,py*max/speed end
    state.simVX,state.simVY=px+state.correctX,py+state.correctY
    -- Native request movement keeps the physical capsule and mesh on one swept Character.
    cm.RequestedVelocity={X=state.simVX,Y=state.simVY,Z=0}
    cm.bRequestedMoveWithMaxSpeed=false;cm.bRequestedMoveUseAcceleration=false;cm.bHasRequestedVelocity=true
-   -- RequestedVelocity already drives the CMC. AddMovementInput here accelerates a second time.
-   -- The animation hook supplies intent without introducing a second physical controller.
-   if state.singleMotion then g:ConsumeMovementInputVector()
-   else
-    local magnitude=norm(c.ax or 0,c.ay or 0)
-    if magnitude>2 then g:AddMovementInput({X=c.ax/magnitude,Y=c.ay/magnitude,Z=0},clamp(magnitude/c.accel,0,1),false) end
-   end
+   -- Restore the validated native input path. The game's locomotion needs real movement input;
+   -- setting a few AnimInstance flags does not replace it. No input consumption during walking.
+   local magnitude=norm(c.ax or 0,c.ay or 0)
+   if magnitude>2 then g:AddMovementInput({X=c.ax/magnitude,Y=c.ay/magnitude,Z=0},clamp(magnitude/c.accel,0,1),false) end
    state.stopped=false;state.driveSpeed=norm(state.simVX,state.simVY)
   else
    state.movement="idle";state.correcting=false;state.correctX,state.correctY=0,0

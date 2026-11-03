@@ -54,7 +54,7 @@ try{
  }
  const output=await api('StopRecord');recording=false;
  const after=await api('GetStats');
- const result={captureDiagnosis:diagnosis,experimentalSingleMotion:process.env.PB0_EXPERIMENT_SINGLE_MOTION==='1',outputPath:output.outputPath,run,selectors,before,after,stats,seconds:(Date.now()-started)/1000,startedUnixMs:started,composition:'Left: host remote guest; right: guest locally driven through Enhanced Input'};
+ const result={captureDiagnosis:diagnosis,movementMode:'restored-native-input',experimentalSingleMotion:false,validationStatus:'pending-foot-motion-and-visual-review',outputPath:output.outputPath,run,selectors,before,after,stats,seconds:(Date.now()-started)/1000,startedUnixMs:started,composition:'Left: host remote guest; right: guest locally driven through Enhanced Input'};
  fs.writeFileSync(path.join(base,'locomotion-recording.json'),JSON.stringify(result,null,2));
  fs.writeFileSync(path.join(run,'locomotion-recorder-done'),JSON.stringify({done:true}));
  console.log(JSON.stringify({type:'locomotion_video_saved',outputPath:output.outputPath}));

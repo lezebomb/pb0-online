@@ -47,16 +47,22 @@ local function info(actor)
  pcall(function() local capsule=actor.CapsuleComponent:K2_GetComponentLocation();local mesh=actor.Mesh:K2_GetComponentLocation();r.capsuleActorGap=math.sqrt((capsule.X-p.X)^2+(capsule.Y-p.Y)^2);r.meshCapsuleGapXY=math.sqrt((mesh.X-capsule.X)^2+(mesh.Y-capsule.Y)^2);r.pawnCollision=actor.CapsuleComponent:GetCollisionResponseToChannel(2) end)
  pcall(function() r.meshSettings={updateRateOptimization=actor.Mesh.bEnableUpdateRateOptimizations,visibilityTick=actor.Mesh.VisibilityBasedAnimTickOption,perBoneMotionBlur=actor.Mesh.bPerBoneMotionBlur} end)
  pcall(function() r.acceleration=cm:GetCurrentAcceleration();r.requestedVelocity={X=cm.RequestedVelocity.X,Y=cm.RequestedVelocity.Y,Z=cm.RequestedVelocity.Z};r.hasRequestedVelocity=cm.bHasRequestedVelocity end)
+ pcall(function() r.cmVelocity={X=cm.Velocity.X,Y=cm.Velocity.Y,Z=cm.Velocity.Z} end)
  pcall(function() r.lastInput=actor:GetLastMovementInputVector() end)
  pcall(function() r.rootMotion=actor:IsPlayingRootMotion();r.gameInputMode=actor.PBZNBInput:IsGameInputMode() end)
  pcall(function() local d=actor:GetLocomotionDriverComponent():GetCurrentMoveInputWorldSpace();r.nativeMoveInput={X=d.X,Y=d.Y,Z=d.Z} end)
  pcall(function()
   local anim=actor.Mesh:GetAnimInstance();r.animClass=anim:GetClass():GetFullName()
   r.animation={gait=anim.Gait,hasVelocity=anim.bHasVelocity,hasAcceleration=anim.bHasAcceleration,displacementSpeed=anim.DisplacementSpeed};
+  pcall(function() local a=anim.LocalAcceleration2D;r.animation.localAcceleration={X=a.X,Y=a.Y,Z=a.Z};r.animation.rateScale=actor.Mesh.GlobalAnimRateScale end)
   local m=anim:GetCurrentActiveMontage();r.montage=api.valid(m) and m:GetFName():ToString() or ""
  end)
  pcall(function() for _,name in ipairs(discoverBones(actor)) do
   local loc=actor.Mesh:GetSocketLocation(FName(name));r.feet[name]={x=loc.X,y=loc.Y,z=loc.Z}
+  local yaw=math.rad(rotation.Yaw);local dx,dy=loc.X-p.X,loc.Y-p.Y
+  r.feet[name].rootX=dx*math.cos(yaw)+dy*math.sin(yaw)
+  r.feet[name].rootY=-dx*math.sin(yaw)+dy*math.cos(yaw)
+  r.feet[name].rootZ=loc.Z-p.Z
  end end)
  return r
 end
@@ -74,8 +80,9 @@ function q.discover()
  for _,s in ipairs(FindAllOf("EnhancedInputLocalPlayerSubsystem") or {}) do
   if s:GetOuter().ControllerId==pc.Player.ControllerId then q.subsystem=s;break end
  end
- event("input_capabilities",{clock=api.game.motionClockInfo,actions=actions,subsystem=api.valid(q.subsystem),selected=q.action and q.action:GetFullName() or "",player=info(p),playerAbilities=abilities(p),ghostAbilities=abilities(api.net.ghost)})
- local out=assert(io.open(c.status,"w"));out:write(encode({ready=api.valid(q.subsystem) and api.valid(q.action),actions=actions}));out:close()
+ local driver={version=PB0_REMOTE_LOCOMOTION.version,mode=PB0_REMOTE_LOCOMOTION.mode}
+ event("input_capabilities",{driver=driver,clock=api.game.motionClockInfo,actions=actions,subsystem=api.valid(q.subsystem),selected=q.action and q.action:GetFullName() or "",player=info(p),playerAbilities=abilities(p),ghostAbilities=abilities(api.net.ghost)})
+ local out=assert(io.open(c.status,"w"));out:write(encode({ready=api.valid(q.subsystem) and api.valid(q.action),driver=driver,actions=actions}));out:close()
 end
 if PB0_REMOTE_LOCOMOTION then
  PB0_REMOTE_LOCOMOTION.onTrace=function(data)
@@ -164,7 +171,7 @@ LoopInGameThreadWithDelay(1,function()
   end
   if not q.lastSample or now-q.lastSample>=.025 then
    q.lastSample=now
-   local row={type="sample",phase=q.phase,time=now,wallClock=os.clock(),utcMs=api.game.motionUtcMs(),frame=frame,localSeq=api.net.seq,delta=api.gs():GetWorldDeltaSeconds(p),player=info(p),target=api.net.target,targetSeq=api.net.lastRemoteSeq,remoteDriver={singleMotion=PB0_REMOTE_LOCOMOTION.singleMotion,corrections=PB0_REMOTE_LOCOMOTION.corrections,correctionFrames=PB0_REMOTE_LOCOMOTION.correctionFrames,inputSent=PB0_REMOTE_LOCOMOTION.inputSent,inputReceived=PB0_REMOTE_LOCOMOTION.inputReceived,inputRejected=PB0_REMOTE_LOCOMOTION.inputRejected,watchdogStops=PB0_REMOTE_LOCOMOTION.watchdogStops,command=PB0_REMOTE_LOCOMOTION.command or {},render=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.render or {},accepted=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.accepted or 0,reordered=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.reordered or 0,skipped=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.skipped or 0,teleports=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.teleports or 0,rootMotionYields=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.rootMotionYields or 0,movement=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.movement or "",delay=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.delay or 0,gaitHook=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitHook or false,gaitApplied=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitApplied or nil,gaitError=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitError or nil,mode=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.mode or "original",controlled=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.controlled or false,error=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.error or nil,input=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.input or {},gap=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gap or 0}}
+   local row={type="sample",phase=q.phase,time=now,wallClock=os.clock(),utcMs=api.game.motionUtcMs(),frame=frame,localSeq=api.net.seq,delta=api.gs():GetWorldDeltaSeconds(p),player=info(p),target=api.net.target,targetSeq=api.net.lastRemoteSeq,remoteDriver={driverMode=PB0_REMOTE_LOCOMOTION.mode,corrections=PB0_REMOTE_LOCOMOTION.corrections,correctionFrames=PB0_REMOTE_LOCOMOTION.correctionFrames,inputSent=PB0_REMOTE_LOCOMOTION.inputSent,inputReceived=PB0_REMOTE_LOCOMOTION.inputReceived,inputRejected=PB0_REMOTE_LOCOMOTION.inputRejected,watchdogStops=PB0_REMOTE_LOCOMOTION.watchdogStops,command=PB0_REMOTE_LOCOMOTION.command or {},render=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.render or {},accepted=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.accepted or 0,reordered=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.reordered or 0,skipped=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.skipped or 0,teleports=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.teleports or 0,rootMotionYields=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.rootMotionYields or 0,movement=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.movement or "",delay=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.delay or 0,gaitHook=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitHook or false,gaitApplied=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitApplied or nil,gaitError=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gaitError or nil,mode=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.mode or "original",controlled=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.controlled or false,error=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.error or nil,input=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.input or {},gap=PB0_REMOTE_LOCOMOTION and PB0_REMOTE_LOCOMOTION.gap or 0}}
    if api.valid(api.net.ghost) then row.ghost=info(api.net.ghost) end
    log:write(encode(row),"\n")
   end
