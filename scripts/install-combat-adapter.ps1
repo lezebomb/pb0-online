@@ -32,7 +32,10 @@ Copy-Item -LiteralPath $main -Destination (Join-Path $backup 'main.lua')
 [IO.File]::WriteAllText($main,$mainPatch)
 $target=Join-Path $mods 'PB0CombatAdapter\Scripts'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
+foreach($script in @('main.lua','presentation.lua','locomotion.lua')){ $oldScript=Join-Path $target $script; if(Test-Path -LiteralPath $oldScript){Copy-Item -LiteralPath $oldScript -Destination (Join-Path $backup ('adapter-'+$script))} }
 Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\main.lua') -Destination (Join-Path $target 'main.lua') -Force
+Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\presentation.lua') -Destination (Join-Path $target 'presentation.lua') -Force
+Copy-Item -LiteralPath (Join-Path $project 'src\Pb0.Mod\Scripts\locomotion.lua') -Destination (Join-Path $target 'locomotion.lua') -Force
 $text=[IO.File]::ReadAllText($modsFile)
 if($text -notmatch '(?m)^PB0CombatAdapter\s*:'){$text="PB0CombatAdapter : 0`r`n"+$text}else{$text=[regex]::Replace($text,'(?m)^PB0CombatAdapter\s*:.*$','PB0CombatAdapter : 0')}
 [IO.File]::WriteAllText($modsFile,$text)

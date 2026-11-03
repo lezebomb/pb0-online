@@ -3,11 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {qualityShowcase} from './quality-showcase.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const readJson=p=>JSON.parse(fs.readFileSync(p,'utf8').replace(/^\uFEFF/,''));
 const profileState=readJson(path.join(root,'runs/save-profile-state.json'));
 if(profileState.ActiveMode!=='Test')throw Error('Testing is paused for personal play. Switch profiles only after the user requests testing.');
 const args=process.argv.slice(2),option=(n,d)=>{const i=args.indexOf(n);return i<0?d:args[i+1];};
+const quality=args.includes('--quality-showcase');
 const stage=option('--stage','pvp'),demo=args.includes('--demo'),hold=args.includes('--hold'),attach=option('--attach');
 const gameRoot=path.join(root,'game-instances',option('--profile','host')),mod=path.join(gameRoot,'platform/steam/ue4ss/Mods/PBZCoop');
 const run=attach?path.resolve(attach):path.join(root,'runs','game-bridge-'+Date.now());fs.mkdirSync(run,{recursive:true});
@@ -81,7 +83,7 @@ async function swing(name){
   checks.attackApplied=true;await sleep(2200);pump();return {measurement:measure(name),responses:messages.slice(start).filter(m=>m.type==='pvp_response')};
 }
 const required=['modLoaded','nativeBidirectional','connectedStatus','playerSnapshots','ghostVisible','ghostMoving',...(stage==='pvp'?['attackApplied','damage','block','parry']:[])];
-function saveResult(){result.ok=required.every(key=>checks[key]);result.missing=required.filter(key=>!checks[key]);if(result.ok)delete result.error;fs.writeFileSync(path.join(run,attach?'pvp-result.json':'result.json'),JSON.stringify(result,null,2));}
+function saveResult(){result.mode=quality?'quality-recording':'combat-verification';result.ok=quality?result.qualityComplete===true:required.every(key=>checks[key]);result.missing=quality?[]:required.filter(key=>!checks[key]);if(result.ok)delete result.error;fs.writeFileSync(path.join(run,attach?'pvp-result.json':'result.json'),JSON.stringify(result,null,2));}
 try{
   if(!['movement','pvp'].includes(stage))throw Error('stage must be movement or pvp');
   const profile=readJson(path.join(gameRoot,'pb0-test-profile.json'));
@@ -102,10 +104,16 @@ try{
     sim.stderr.on('data',b=>fs.appendFileSync(path.join(run,'simulator-errors.log'),b));
   }
   report('waiting_for_gameplay',{run});
-  await until(()=>checks.modLoaded&&checks.nativeBidirectional,90000,'mod and fresh signed UDP');
+  await until(()=>checks.modLoaded&&checks.nativeBidirectional,180000,'mod and fresh signed UDP');
   const lua=path.join(root,'scripts/pvp-probe.lua').replaceAll('\\','/'),out=telemetry.replaceAll('\\','/');
   if(attach){await command('eval if PB0_TEST then PB0_TEST.stop() end');await sleep(200);}
   await command('eval PB0_PROBE_CONFIG={autoContinue=true,runId='+JSON.stringify(probeId)+',parryDelay='+Number(option('--parry-delay','0.25'))+',output='+JSON.stringify(out)+'} PB0_TEST=dofile('+JSON.stringify(lua)+') return "PB0 observer loaded"');probeLoaded=true;
+  if(quality){
+    await until(()=>observations.some(o=>o.type==='sample'&&o.playerReady&&o.ghostExists&&o.meshVisible)&&observations.some(o=>o.type==='capabilities'&&o.attackPath),120000,'renderable single-game scene');
+    const cap=observations.findLast(o=>o.type==='capabilities'&&o.attackPath);
+    await qualityShowcase({root,run,command,saveControl,observations,pump,sleep,shouldStop,phase,cap,report,result});
+    result.qualityComplete=true;
+  }else{
   await until(()=>checks.playerSnapshots&&checks.ghostVisible&&checks.ghostMoving,Number(option('--timeout','180'))*1000,'fresh real visible moving opponent');
   report('moving_opponent_verified',{travelCm:result.measurements.ghostTravelCm});
   await until(()=>observations.some(o=>o.type==='capabilities'&&o.attackPath),8000,'loaded attack capabilities');
@@ -132,6 +140,7 @@ try{
   if(demo){
     await command('eval PB0_TEST.release() PB0_TEST.setPhase("demo")');saveControl({mode:'duel',range:150,attackPath:cap.attackPath});
     report('prototype_running',{run,checks});while(!shouldStop()){pump();await sleep(500);}
+  }
   }
 }catch(e){
   result.error=e.message;process.exitCode=1;saveResult();

@@ -1,0 +1,193 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "AdapterVersion": 6,
+  "InputSimulationImplemented": true,
+  "FullAnimationParity": false,
+  "Changes": [
+    "Existing signed event W carries versioned latest input, applied acceleration, physical deceleration, velocity, movement mode and Root Motion state; changes sent immediately, 10 Hz heartbeat plus stop repeats",
+    "Authoritative positions/full velocity remain about 30 Hz; receive and event dispatch run once per engine frame",
+    "Ghost alone uses native swept CharacterMovement requests continuously between messages; no local controller injection or coordinate chasing",
+    "8/4 cm correction hysteresis, stale-message rejection, 250 ms watchdog; original attack M events retained",
+    "Shared UTC-calibrated monotonic clocks used for cross-process latency; normal rendering still uses verified per-window WGC"
+  ],
+  "Measurements": {
+    "MotionStartStopRelativeToLocalMs": {
+      "before": {
+        "start": {
+          "n": 3,
+          "p50": 74.0,
+          "p95": 83.0
+        },
+        "stop": {
+          "n": 3,
+          "p50": 67.0,
+          "p95": 71.5
+        }
+      },
+      "after": {
+        "start": {
+          "n": 3,
+          "p50": 56.0,
+          "p95": 66.8
+        },
+        "stop": {
+          "n": 3,
+          "p50": 4.0,
+          "p95": 6.699999999999999
+        }
+      }
+    },
+    "ClockCalibrationUncertaintyMsPerProcess": 1,
+    "EventsAndGameThreadMs": {
+      "nativeInputInjectionToGhostMs": {
+        "n": 3,
+        "p50": 322.0,
+        "p95": 337.3
+      },
+      "inputEventAppendToHostDispatchMs": {
+        "n": 218,
+        "p50": 23.0,
+        "p95": 37.14999999999998
+      },
+      "hostReceiveToGameThreadApplyMs": {
+        "n": 525,
+        "p50": 0.0,
+        "p95": 1.0
+      },
+      "appliedByOrigin": {
+        "event": 53,
+        "snapshot": 472
+      }
+    },
+    "InputInjectionAndMotionMs": {
+      "forward": {
+        "injectionToLocalMs": 284.0,
+        "injectionToGhostMs": 322.0,
+        "localToGhostMs": 38.0,
+        "injectionToApplyMs": 37.0
+      },
+      "lateral": {
+        "injectionToLocalMs": 286.0,
+        "injectionToGhostMs": 297.0,
+        "localToGhostMs": 11.0,
+        "injectionToApplyMs": 46.0
+      },
+      "turn": {
+        "injectionToLocalMs": 285.0,
+        "injectionToGhostMs": 339.0,
+        "localToGhostMs": 54.0,
+        "injectionToApplyMs": 41.0
+      }
+    },
+    "OneNativeAttackApplyMs": 65.0,
+    "RoleMetrics": {
+      "host": {
+        "actualFPS": 56.71608845617013,
+        "frameIntervalP50P95Ms": [
+          18.000125885009766,
+          25.999784469604492
+        ],
+        "sendHz": 30.183215459152418,
+        "acceptedReceiveHz": 29.125132260399845,
+        "snapshotReceiveIntervalMs": {
+          "n": 523,
+          "p50": 33.0,
+          "p95": 55.0
+        },
+        "snapshotSampleToReceiveMs": {
+          "n": 524,
+          "p50": 23.0,
+          "p95": 35.0
+        },
+        "correctionEpisodes": 0,
+        "correctionFrames": 0,
+        "watchdogStops": 0,
+        "walkingTeleports": 0,
+        "capsuleActorGapMaxCm": 0.0,
+        "meshCapsuleXYGapMaxCm": 0.0,
+        "capsulePawnCollisionResponses": [
+          2
+        ]
+      },
+      "guest": {
+        "actualFPS": 54.08971002340177,
+        "frameIntervalP50P95Ms": [
+          19.00005340576172,
+          26.999950408935547
+        ],
+        "sendHz": 30.227120908483638,
+        "acceptedReceiveHz": 28.557114228456918,
+        "snapshotReceiveIntervalMs": {
+          "n": 512,
+          "p50": 33.0,
+          "p95": 58.44999999999999
+        },
+        "snapshotSampleToReceiveMs": {
+          "n": 513,
+          "p50": 22.0,
+          "p95": 35.0
+        },
+        "correctionEpisodes": 0,
+        "correctionFrames": 0,
+        "watchdogStops": 0,
+        "walkingTeleports": 0,
+        "capsuleActorGapMaxCm": 0.0,
+        "meshCapsuleXYGapMaxCm": 0.0,
+        "capsulePawnCollisionResponses": [
+          2
+        ]
+      }
+    },
+    "PositionP95Cm": {
+      "forward": {
+        "before": 5.260153538816038,
+        "after": 3.2181077861780727
+      },
+      "lateral": {
+        "before": 5.815222692208909,
+        "after": 4.500102761850318
+      },
+      "turn": {
+        "before": 9.473991368600979,
+        "after": 1.872551599998435
+      }
+    },
+    "StopResidualCm": [
+      0,
+      0,
+      0
+    ]
+  },
+  "Recording": {
+    "Seconds": 18.133333333333333,
+    "Resolution": [
+      1920,
+      1080
+    ],
+    "FPS": 60,
+    "Frames": 1088,
+    "BackgroundSeamsFound": {
+      "host": 0,
+      "guest": 0
+    },
+    "OBSDroppedFrames": {
+      "renderDropped": 4,
+      "encoderDropped": 4
+    },
+    "OnlyLocalMedia": true
+  },
+  "Limits": [
+    "Only three short movement/stop sequences; fair before/after motion timings are sampled at roughly 25-40 ms resolution, not hardware input-to-photon latency.",
+    "Injection-to-motion includes the native local startup/filter/animation delay (about 284-286 ms in this sequence). The full delay is not network transit.",
+    "Event append-to-dispatch includes native file bridge and frame boundaries; UDP-only loss/latency was not separately measured.",
+    "Foot phase and visual ghosting remain imperfect; no claim of complete animation parity or new damage/block/Perfect acceptance.",
+    "Cross-process clock calibration is verified for the same Windows computer; cross-computer skew compensation is not validated."
+  ],
+  "Cleanup": {
+    "PlayRestored": true,
+    "PersonalFilesHashMatched": 26,
+    "OwnedTestProcesses": 0,
+    "PrivateGraphicsSettingsRestored": true
+  }
+}

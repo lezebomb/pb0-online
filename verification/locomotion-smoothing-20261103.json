@@ -1,0 +1,121 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "Task": "Timestamped remote motion smoothing",
+  "PositionTrackingImproved": true,
+  "FullAnimationAcceptancePassed": false,
+  "Implemented": [
+    "Optional source timestamp and world velocity in existing P snapshot; actual-time velocity estimation",
+    "Monotonic timestamp buffer with 90 ms interpolation and at most 50 ms bounded extrapolation",
+    "Reject older source times/sequences before changing upstream target",
+    "Feed-forward velocity via native CharacterMovement requested velocity, bounded physical correction and source-stop latch",
+    "One movement update per engine frame; native moving pivot/rotation retained; yield to native Root Motion and abilities"
+  ],
+  "Unchanged": [
+    "EasyTier transport and native relay",
+    "Network target rate ~30 Hz",
+    "Native damage/block/Perfect logic",
+    "Original game installation"
+  ],
+  "StaticChecks": [
+    "Lua syntax on source and both generated private coop.lua",
+    "Timestamp interpolation/frame dedup/stale rejection/stop/Root Motion/source teleport boundary checks"
+  ],
+  "ActualShortRuns": 2,
+  "SecondRunReason": "First attempt lost movement input and fought native rotation; one targeted correction then one final short recording.",
+  "Measurements": {
+    "SendHz": {
+      "host": 30.328340918314822,
+      "guest": 30.278061530727218
+    },
+    "AcceptedReceiveHz": {
+      "host": 28.488570237608226,
+      "guest": 23.042495356104904
+    },
+    "OutOfOrderRejected": {
+      "host": 0,
+      "guest": 0
+    },
+    "SkippedSnapshotSequences": {
+      "host": 33,
+      "guest": 130
+    },
+    "PacketLoss": "Not independently measured: sequence gaps include latest-file coalescing/native polling, not a proven UDP loss rate.",
+    "ActualFPS": {
+      "host": 53.274450622590585,
+      "guest": 65.00141536686331
+    },
+    "FrameMsP50P95": {
+      "host": [
+        19.46035,
+        21.94562475
+      ],
+      "guest": [
+        15.195202,
+        22.771500399999994
+      ]
+    },
+    "WindowState": "Both game windows remained in background in all 90 observed recording samples. Foreground swap not performed; no claim of complete foreground/background exclusion.",
+    "BufferedPositionGapMedianP95Cm": {
+      "forward": [
+        1.1546572979793286,
+        2.8572837805135585
+      ],
+      "lateral": [
+        2.5707218543661168,
+        2.6508823409971867
+      ],
+      "turn": [
+        2.2211904968644665,
+        3.8551614039827524
+      ]
+    },
+    "RawPositionGapMedianP95Cm": {
+      "forward": [
+        2.6505213199054793,
+        9.686431880623875
+      ],
+      "lateral": [
+        2.6505213199054793,
+        10.53697822730168
+      ],
+      "turn": [
+        2.5707218543661168,
+        10.773832388022752
+      ]
+    },
+    "StopResidualCm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "WalkingTeleports": 0,
+    "TurnFootPlantFraction": {
+      "remote": 0.0967741935483871,
+      "local": 0.6666666666666666
+    },
+    "TurnLowerFootSpeedRatioMedian": {
+      "remote": 0.6516718456310864,
+      "local": 0.10715324862776948
+    }
+  },
+  "Recording": {
+    "Seconds": 18.166666666666668,
+    "Resolution": [
+      1920,
+      1080
+    ],
+    "FPS": 60,
+    "RenderDropped": 0,
+    "EncoderDropped": 0,
+    "DecodedBothViewports": true,
+    "OneGuestAttackAndOneHostNativeMoveReceived": true,
+    "LocalOnly": true
+  },
+  "Remaining": "Turn foot animation is still worse than local. Local MaxWalkSpeed/input magnitude medians 100/1 vs remote 450/0.229; native animation input/speed calibration is a concrete remaining lead. No further test beyond permitted targeted correction.",
+  "Cleanup": {
+    "PlayRestored": true,
+    "PersonalFilesHashMatched": 26,
+    "OwnedTestProcesses": 0
+  }
+}

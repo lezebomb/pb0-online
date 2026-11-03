@@ -1,0 +1,50 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "Task": "Real guest Enhanced Input and remote walking gait/stop fix",
+  "Passed": true,
+  "InputAction": "/SGameLocomotionDriver/Input/IA_JoystickMoveInput",
+  "TwoRealGames": true,
+  "ExistingSaveIsolationProofReused": true,
+  "GameBridgeAndEasyTierUnchanged": true,
+  "ExistingNetworkStateHzUnchanged": true,
+  "Changes": [
+    "Authoritative optional gait appended to P snapshot, older readers ignore trailing field",
+    "Native remote animation uses that gait after its normal locomotion state update",
+    "Analog CharacterMovement speed matching, bounded correction, native turn pivot calibration",
+    "Stationary input/velocity latch prevents repeated minimum-speed correction"
+  ],
+  "Measurements": {
+    "GaitMatched": 138,
+    "GaitSamples": 138,
+    "RemoteStopResidualCm": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "RemoteFootPlantFraction": {
+      "forward": 0.6052631578947368,
+      "lateral": 0.5454545454545454,
+      "turn": 0.425
+    },
+    "RemoteLowerFootSpeedRatioMedian": {
+      "forward": 0.24652534641568596,
+      "lateral": 0.2440667826397865,
+      "turn": 0.3089864819797593
+    },
+    "RemoteMaxTurnPositionStepCm": 3.589321097590279
+  },
+  "Recording": {
+    "DurationSeconds": 18.083333333333332,
+    "Resolution": [
+      1920,
+      1080
+    ],
+    "FPS": 60,
+    "RealHostAndGuestSideBySide": true,
+    "RenderDropped": 0,
+    "EncoderDropped": 0,
+    "StoredLocallyOnly": true
+  },
+  "Limit": "Small remaining tracking speed/position error; no sprint/slopes/WAN acceptance claimed."
+}

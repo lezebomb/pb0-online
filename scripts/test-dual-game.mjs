@@ -4,12 +4,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),run=path.join(root,'runs','dual-game-'+Date.now());
+import {runLocomotion} from './test-locomotion.mjs';
+const locomotion=process.argv.includes('--locomotion');
+const showcase=process.argv.includes('--showcase');
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),run=path.join(root,'runs',(locomotion?'locomotion-game-':showcase?'record-game-':'dual-game-')+Date.now());
 const json=file=>JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
 if(json(path.join(root,'runs/save-profile-state.json')).ActiveMode!=='Test')throw Error('Switch to test saves after user authorization first.');
 fs.mkdirSync(run,{recursive:true});fs.writeFileSync(path.join(root,'runs/dual-game-current.json'),JSON.stringify({run}));
-const deadline=Date.now()+300000,players={},checks={isolatedSaves:false,twoRealGames:false,bothGhosts:false,hostHitsGuest:false,guestHitsHost:false,realParry:false,realBlock:false};
-const result={schema:1,ok:false,run,checks,measurements:{},startedAt:new Date().toISOString()};
+const deadline=Date.now()+(locomotion?480000:300000),players={},checks={isolatedSaves:false,twoRealGames:false,bothGhosts:false,hostHitsGuest:false,guestHitsHost:false,realParry:false,realBlock:false};
+const result={schema:1,ok:false,mode:locomotion?'locomotion-comparison':showcase?'recording-showcase':'combat-verification',run,checks,measurements:{},startedAt:new Date().toISOString()};
 let stopping=false;const sleep=ms=>new Promise(r=>setTimeout(r,ms)),report=(type,data={})=>console.log(JSON.stringify({type,...data}));
 process.on('SIGINT',()=>stopping=true);process.on('SIGTERM',()=>stopping=true);
 const stopped=()=>stopping||Date.now()>deadline||fs.existsSync(path.join(run,'stop'));
@@ -29,14 +32,14 @@ function launch(name,host,invite){
  const mod=path.join(gameRoot,'platform/steam/ue4ss/Mods/PBZCoop'),probeId=crypto.randomUUID();
  const p={name,gameRoot,mod,probeId,rows:[],events:[],offset:0,partial:'',buffer:'',telemetry:path.join(run,name+'-observations.jsonl')};players[name]=p;
  p.devCreated=!fs.existsSync(path.join(mod,'dev.txt'));if(p.devCreated)fs.writeFileSync(path.join(mod,'dev.txt'),'PB0 isolated dual test');fs.writeFileSync(path.join(mod,'cmd.txt'),'');
- const params=[host?'host':'join','--json','--root',root,'--local','--game-root',gameRoot,'--run-dir',path.join(run,name),'--allow-isolated-games','--duration','300','--launch-game',host?'--invite-out':'--invite-file',invite];
+ const params=[host?'host':'join','--json','--root',root,'--local','--game-root',gameRoot,'--run-dir',path.join(run,name),'--allow-isolated-games','--duration',locomotion?'480':'300','--launch-game',host?'--invite-out':'--invite-file',invite];
  p.child=spawn(path.join(root,'dist/PB0/PB0.exe'),params,{cwd:root,windowsHide:true,stdio:['pipe','pipe','pipe']});
- p.child.stdout.on('data',b=>{p.buffer+=b.toString();let i;while((i=p.buffer.indexOf('\n'))>=0){const line=p.buffer.slice(0,i);p.buffer=p.buffer.slice(i+1);try{const e=JSON.parse(line);p.events.push(e);if(e.type==='game_started'){p.pid=e.data.pid;report('real_game_started',{name,pid:p.pid});}}catch{}}});
+ p.child.stdout.on('data',b=>{p.buffer+=b.toString();let i;while((i=p.buffer.indexOf('\n'))>=0){const line=p.buffer.slice(0,i);p.buffer=p.buffer.slice(i+1);try{const e=JSON.parse(line);p.events.push(e);if(e.type==='game_started'){p.pid=e.data.pid;p.gameStartedAt=Date.now();report('real_game_started',{name,pid:p.pid});}}catch{}}});
  p.child.stderr.on('data',b=>fs.appendFileSync(path.join(run,name+'-errors.log'),b));p.child.on('error',e=>{p.exit=1;p.error=e.message;});p.child.on('exit',code=>p.exit=code);
  return p;
 }
 async function loadProbe(p){
- await until(()=>{try{return fs.readFileSync(path.join(p.gameRoot,'platform/steam/ue4ss/UE4SS.log'),'utf8').includes('PB0 native PvP verdict adapter ready');}catch{return false;}},80000,p.name+' adapter');
+ await until(()=>{try{const log=path.join(p.gameRoot,'platform/steam/ue4ss/UE4SS.log');return fs.statSync(log).mtimeMs>=p.gameStartedAt&&fs.readFileSync(log,'utf8').includes('PB0 native PvP verdict adapter ready');}catch{return false;}},180000,p.name+' adapter');
  await command(p,'PB0_PROBE_CONFIG={autoContinue=true,autoParry='+String(p.name==='guest')+',runId='+JSON.stringify(p.probeId)+',parryDelay=0.25,output='+JSON.stringify(p.telemetry.replaceAll('\\','/'))+'} PB0_TEST=dofile('+JSON.stringify(path.join(root,'scripts/pvp-probe.lua').replaceAll('\\','/'))+')');
 }
 async function phase(name){for(const p of Object.values(players))await command(p,'PB0_TEST.release() PB0_TEST.setPhase('+JSON.stringify(name)+')');await until(()=>Object.values(players).every(p=>p.rows.some(o=>o.type==='phase_started'&&o.phase===name)),2500,'phase '+name);}
@@ -53,8 +56,26 @@ try{
  checks.isolatedSaves=true;await until(()=>host.pid&&guest.pid,30000,'two real game launches');checks.twoRealGames=host.pid!==guest.pid;
  // Mod logs are reused on disk; require this launch's game_started first, then use the command-response path.
  await Promise.all([loadProbe(host),loadProbe(guest)]);
- await until(()=>[host,guest].every(p=>latest(p)?.ghostExists&&latest(p)?.meshVisible&&!latest(p)?.ghostHidden&&p.rows.some(o=>o.type==='capabilities'&&o.attackPath)),100000,'both loaded players and real ghosts');checks.bothGhosts=true;
+ await until(()=>[host,guest].every(p=>latest(p)?.ghostExists&&latest(p)?.meshVisible&&!latest(p)?.ghostHidden&&p.rows.some(o=>o.type==='capabilities'&&o.attackPath)),180000,'both loaded players and real ghosts');checks.bothGhosts=true;
  anchor={x:latest(host).player.x,y:latest(host).player.y,z:latest(host).player.z};
+ if(locomotion){
+  await runLocomotion({root,run,host,guest,command,phase,until,latest,pump,sleep,stopped,report,result});
+ }else if(showcase){
+  await align();for(const p of [host,guest])await command(p,'PB0_TEST.showcaseCamera('+(anchor.x+70)+','+anchor.y+','+anchor.z+')');await phase('showcase-ready');
+  fs.writeFileSync(path.join(run,'showcase-ready.json'),JSON.stringify({run,players:Object.fromEntries(Object.values(players).map(p=>[p.name,{pid:p.pid,gameRoot:p.gameRoot}]))}));
+  report('showcase_ready',{run});
+  await until(()=>fs.existsSync(path.join(run,'showcase-start')),120000,'game capture confirmation');
+  const began=Date.now(),at=async seconds=>{while(Date.now()-began<seconds*1000&&!stopped()){pump();await sleep(100);}if(stopped())throw Error('Showcase stopped');};
+  const walk=async(p,direction)=>command(p,'local _,p=PBZ.getPlayer1() local ending=os.clock()+0.65 local function move() if os.clock()<ending and PBZ.valid(p) then p:AddMovementInput({X=0,Y='+direction+',Z=0},0.15,false) PBZ.game.after(0.016,move) end end move()');
+  await phase('showcase-movement');await walk(host,1);await walk(guest,-1);await at(3);await walk(host,-1);await walk(guest,1);await at(7);await command(host,'PB0_TEST.face()');await command(guest,'PB0_TEST.face()');
+  await at(10);await phase('showcase-attacks');await command(host,'PB0_TEST.attackOnce()');await at(13);await command(guest,'PB0_TEST.attackOnce()');await at(16);await command(host,'PB0_TEST.attackOnce()');await at(19);await command(guest,'PB0_TEST.attackOnce()');
+  await at(25);await phase('showcase-block');await command(guest,'PB0_TEST.defend()');await sleep(900);await command(host,'PB0_TEST.attackOnce()');await at(29);await command(guest,'PB0_TEST.release()');await command(host,'PB0_TEST.defend()');await sleep(900);await command(guest,'PB0_TEST.attackOnce()');await at(33);await command(host,'PB0_TEST.release()');
+  await at(40);await phase('parry');await command(host,'PB0_TEST.attackOnce()');await at(46);await command(host,'PB0_TEST.attackOnce()');
+  await at(52);await phase('showcase-finale');await walk(host,1);await walk(guest,-1);await at(55);await walk(host,-1);await walk(guest,1);await at(60);
+  result.showcaseSeconds=(Date.now()-began)/1000;result.ok=true;
+  fs.writeFileSync(path.join(run,'showcase-done.json'),JSON.stringify({seconds:result.showcaseSeconds}));report('showcase_complete',{seconds:result.showcaseSeconds});
+  const flush=Date.now()+15000;while(!stopped()&&Date.now()<flush){await sleep(200);}
+ }else{
  for(const [name,attacker,defender,check] of [['host-hits-guest',host,guest,'hostHitsGuest'],['guest-hits-host',guest,host,'guestHitsHost']]){
   await align();await phase(name);await command(attacker,'PB0_TEST.attackOnce()');
   await until(()=>loss(defender,name,'hp')>0.5&&rows(defender,name).some(o=>attackActive(o.ghost?.active))&&rows(attacker,name).some(o=>attackActive(o.player.active)),5000,name+' native move and real HP loss');
@@ -68,10 +89,11 @@ try{
  await until(()=>loss(guest,'block','posture')>10&&rows(guest,'block').some(o=>attackActive(o.ghost?.active)),5000,'real block');
  checks.realBlock=loss(guest,'block','hp')<=0.5;result.measurements.block={hpLoss:loss(guest,'block','hp'),postureLoss:loss(guest,'block','posture')};report('real_block_verified',result.measurements.block);
  result.ok=Object.values(checks).every(Boolean);if(!result.ok)throw Error('Missing: '+Object.keys(checks).filter(k=>!checks[k]).join(', '));
+ }
 }catch(e){result.error=e.message;process.exitCode=1;}
 finally{
  pump();result.finishedAt=new Date().toISOString();result.players=Object.fromEntries(Object.values(players).map(p=>[p.name,{pid:p.pid,gameRoot:p.gameRoot,telemetry:p.telemetry}]));
  fs.writeFileSync(path.join(run,'result.json'),JSON.stringify(result,null,2));report('result',result);
- for(const p of Object.values(players)){try{await command(p,'if PB0_TEST then PB0_TEST.release() PB0_TEST.stop() end');}catch{}try{p.child.stdin.write('quit\n');}catch{}}
+ for(const p of Object.values(players)){try{await command(p,'if PB0_LOCO then PB0_LOCO.stop() end if PB0_TEST then PB0_TEST.release() PB0_TEST.stop() end');}catch{}try{p.child.stdin.write('quit\n');}catch{}}
  await sleep(1800);for(const p of Object.values(players)){if(p.exit===undefined)p.child.kill();if(p.devCreated)fs.rmSync(path.join(p.mod,'dev.txt'),{force:true});}
 }

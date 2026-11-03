@@ -1,0 +1,194 @@
+{
+  "Schema": 1,
+  "Date": "2026-11-03",
+  "Task": "Capture tearing and remote motion/latency",
+  "P0": {
+    "PassedThisRecording": true,
+    "OperationalCause": "Old OBS D3D12 game-capture shared-texture path produced mixed horizontal regions. Single-host capture reproduced it; dual composition was not required. WGC completed-window capture removed the observed fault. Exact driver-level cause was not investigated.",
+    "ShortControlClips": [
+      {
+        "name": "single-game-legacy",
+        "frames": 241,
+        "rawSuspectedSeams": {
+          "host": 11,
+          "guest": 0
+        }
+      },
+      {
+        "name": "dual-game-legacy",
+        "frames": 244,
+        "rawSuspectedSeams": {
+          "host": 14,
+          "guest": 3
+        }
+      },
+      {
+        "name": "dual-game-vsync60",
+        "frames": 243,
+        "rawSuspectedSeams": {
+          "host": 9,
+          "guest": 3
+        }
+      },
+      {
+        "name": "dual-wgc-unlimited",
+        "frames": 244,
+        "rawSuspectedSeams": {
+          "host": 0,
+          "guest": 0
+        }
+      }
+    ],
+    "VSync60AloneFixed": false,
+    "Capture": "Separate WGC window_capture sources, exact unique titles, client area only",
+    "FinalVSync": true,
+    "FinalGameFPSLimit": 0,
+    "FrameGeneration": "Streamline DLSSG library was not present; relevant queried CVars read 0. No evidence FG caused the fault.",
+    "DeliveryFrames": 1091,
+    "TrueHorizontalSeamsFound": {
+      "host": 0,
+      "guest": 0
+    },
+    "Scope": "All delivered frames scanned; real decoded frames and HUD false positives visually checked. This is bounded evidence for this recording."
+  },
+  "P1": {
+    "PositionAndStartStopImproved": true,
+    "FullFootAnimationParity": false,
+    "Changes": [
+      "Replicate native MaxWalkSpeed, MaxAcceleration and real world input direction/magnitude in optional trailing snapshot fields",
+      "45 ms timestamp buffer with bounded 35 ms extrapolation; unchanged ~30 Hz target",
+      "Keep native requested-velocity swept physics and yield during combat Root Motion",
+      "Recording-only attack no longer forces actor/control rotation; camera remains an independent view target"
+    ],
+    "Metrics": {
+      "roles": {
+        "host": {
+          "fpsBySharedUTC": 59.9257171811086,
+          "frameIntervalMsP50P95": [
+            16.99995994567871,
+            24.99985694885254
+          ],
+          "sendHz": 30.289532293986635,
+          "acceptedReceiveHz": 23.49665924276169,
+          "stateSampleToReceiverMsP50P95": [
+            24.0,
+            43.0
+          ],
+          "receiveIntervalMsP50P95": [
+            40.0,
+            72.0
+          ],
+          "outOfOrder": 0,
+          "skippedSequence": 123,
+          "clockStepDisagreementMsMax": 2.0
+        },
+        "guest": {
+          "fpsBySharedUTC": 64.5357520084982,
+          "frameIntervalMsP50P95": [
+            16.000032424926758,
+            23.999929428100586
+          ],
+          "sendHz": 30.32685611591598,
+          "acceptedReceiveHz": 27.799618106256318,
+          "stateSampleToReceiverMsP50P95": [
+            27.0,
+            42.0
+          ],
+          "receiveIntervalMsP50P95": [
+            32.0,
+            59.0
+          ],
+          "outOfOrder": 0,
+          "skippedSequence": 44,
+          "clockStepDisagreementMsMax": 1.0
+        }
+      },
+      "receivedToGhostVelocityLag": {
+        "before": {
+          "milliseconds": 107,
+          "metric": "Best-fit delay of actual Ghost velocity behind received authoritative velocity; host monotonic clock, ~25-40 ms sampling. Not end-to-end input latency."
+        },
+        "after": {
+          "milliseconds": 48,
+          "metric": "Best-fit delay of actual Ghost velocity behind received authoritative velocity; host monotonic clock, ~25-40 ms sampling. Not end-to-end input latency."
+        }
+      },
+      "movementOnsetLagMs": {
+        "forward": 97,
+        "lateral": 72,
+        "turn": 53
+      },
+      "renderedSourceAgeMs": {
+        "forward": [
+          66.8499755859375,
+          76.20505371093749
+        ],
+        "lateral": [
+          66.949951171875,
+          75.50009765624999
+        ],
+        "turn": [
+          65.60009765625,
+          75.22006835937499
+        ]
+      },
+      "oneAttackLocalAbilityToRemoteAbilityMs": 57,
+      "packetLoss": "Not independently measured: sequence skips include latest-file coalescing and relay polling."
+    },
+    "PositionP95Cm": {
+      "forward": {
+        "before": 9.686431880623875,
+        "after": 5.260153538816038
+      },
+      "lateral": {
+        "before": 10.53697822730168,
+        "after": 5.815222692208909
+      },
+      "turn": {
+        "before": 10.773832388022752,
+        "after": 9.473991368600979
+      }
+    },
+    "StopResidualCm": [
+      0,
+      0,
+      0
+    ],
+    "Remaining": "Lateral/turn foot phase and some sliding remain. High-speed dash Root Motion, attack/hit/end phases and true WAN jitter still need dedicated synchronization/validation."
+  },
+  "Recording": {
+    "DurationSeconds": 18.183333333333334,
+    "OutputResolution": [
+      1920,
+      1080
+    ],
+    "GameResolutionEach": [
+      1280,
+      720
+    ],
+    "FPS": 60,
+    "NVENC": true,
+    "OBSDropped": {
+      "renderDropped": 0,
+      "encoderDropped": 0
+    },
+    "ActualGameFPS": {
+      "host": 59.9257171811086,
+      "guest": 64.5357520084982
+    },
+    "MediaLocalOnly": true
+  },
+  "Limits": [
+    "Received-to-Ghost lag is a best-fit velocity-response measurement at ~25-40 ms sampling, not hardware input-to-photon latency.",
+    "Shared computer UTC milliseconds were checked against per-process monotonic deltas (max disagreement 2 ms in this clip).",
+    "57 ms is one native ability-start application measurement, not hit-confirmation or parry latency.",
+    "Skipped state sequences include latest-file coalescing; actual UDP packet loss was not independently measured.",
+    "No repeat of accepted damage, block or Perfect assertions."
+  ],
+  "Cleanup": {
+    "PlayRestored": true,
+    "PersonalFilesHashMatched": 26,
+    "OwnedTestProcesses": 0,
+    "PrivateGraphicsSettingsRestored": true
+  }
+}

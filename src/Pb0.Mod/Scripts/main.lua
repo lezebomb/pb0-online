@@ -6,12 +6,14 @@ local parryPosture=60
 local ini=io.open(iniPath,"r")
 if ini then local text=ini:read("a");ini:close();parryPosture=math.max(0,math.min(400,tonumber(text:match("[\r\n]%s*PvPParryPosture%s*=%s*(%d+)")) or 60)) end
 local installed=false
-local deadline=os.clock()+60
+local deadline=os.clock()+180
 LoopInGameThreadWithDelay(50,function()
     if installed or os.clock()>deadline then return false end
     local api=rawget(_G,"PBZ")
     if not (api and api.coop and api.game) then return false end
     installed=true
+    dofile(source:gsub("main%.lua$","presentation.lua"))(api)
+    dofile(source:gsub("main%.lua$","locomotion.lua"))(api)
     local adapter={version=1,perfectCount=0,events={}}
     local seen={}
     PB0_NATIVE_PVP=adapter

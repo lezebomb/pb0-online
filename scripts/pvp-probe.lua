@@ -17,7 +17,7 @@ local function encode(v)
     return v==nil and "null" or quote(v)
 end
 local function emit(kind,value)
-    value=value or {};value.type,value.phase,value.clock,value.runId=kind,probe.phase,os.clock(),config.runId
+    value=value or {};if api.game.motionUtcMs then value.utcMs=api.game.motionUtcMs() end;value.type,value.phase,value.clock,value.runId=kind,probe.phase,os.clock(),config.runId
     output:write(encode(value),"\n");output:flush()
 end
 local library=StaticFindObject("/Script/GameplayAbilities.Default__AbilitySystemBlueprintLibrary")
@@ -57,12 +57,29 @@ local function stats(actor)
     end)
     return result
 end
-function probe.attackOnce()
+-- Recording-only camera; combat and rendering remain the real game's own systems.
+function probe.showcaseCamera(x,y,z)
+    local pc,p=api.getPlayer1()
+    if not (api.valid(pc) and api.valid(p)) then return false end
+    local position={X=x,Y=y-300,Z=z+260}
+    if not api.valid(probe.camera) then
+        local transform={Rotation={X=0,Y=0,Z=0,W=1},Translation=position,Scale3D={X=1,Y=1,Z=1}}
+        local camera=api.gs():BeginDeferredActorSpawnFromClass(pc,StaticFindObject("/Script/Engine.CameraActor"),transform,2,nil,0)
+        probe.camera=api.gs():FinishSpawningActor(camera,transform,0)
+    end
+    if not api.valid(probe.camera) then return false end
+    probe.camera:K2_SetActorLocationAndRotation(position,{Pitch=-31,Yaw=90,Roll=0},false,{},true)
+    pcall(function() probe.camera.CameraComponent:SetFieldOfView(60) end)
+    pc:SetViewTargetWithBlend(probe.camera,0,0,0,false)
+    emit("recording_camera",{x=position.X,y=position.Y,z=position.Z})
+    return true
+end
+function probe.attackOnce(faceTarget)
     local _,p=api.getPlayer1()
     if not (api.valid(p) and probe.attack) then emit("local_attack",{ok=false});return false end
-    probe.face()
+    if faceTarget~=false then probe.face() end
     local ok=api.game.playAbility(p,probe.attack)
-    emit("local_attack",{ok=ok==true,path=probe.attack})
+    emit("local_attack",{ok=ok==true,path=probe.attack,utcMs=api.game.motionUtcMs and api.game.motionUtcMs() or nil})
     return ok
 end
 function probe.face()

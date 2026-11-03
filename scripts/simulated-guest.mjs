@@ -12,7 +12,8 @@ const socket=dgram.createSocket('udp4'),lastCounters=new Map(),seenEvents=new Ma
 const started=Date.now(),duration=Number(option('--seconds','300'))*1000,controlFile=option('--control-file');
 let counter=0n,sequence=0,eventId=0,hostState,lastHostAt=0,received=0,returned=0,acked=0,lastControl='',lastAttack=0;
 let control={mode:'orbit',attackPath:option('--attack-path',''),attackEveryMs:2500,attackOnce:0,range:150};
-let handledAttack=0,lastReport=0,finished=false,posture=400;
+let handledAttack=0,lastReport=0,finished=false,posture=400,hostUnique=0,hostSeq;
+let previousTarget,anchor,anchorKey='',sendTimer;const stateHz=30,tickMs=1000/stateHz;
 const report=(type,data={})=>console.log(JSON.stringify({type,at:Date.now(),...data}));
 function send(message){
   const h=Buffer.alloc(29);h.write('PPA1');h.write('C',4);nonce.copy(h,5);
@@ -23,11 +24,18 @@ function send(message){
 function playerLine(){
   if(!hostState||Date.now()-lastHostAt>2500)return null;
   const c=[...hostState],yaw=Number(c[5])*Math.PI/180,t=(Date.now()-started)/1000;
-  const range=Number(control.range??150),side=control.mode==='orbit'?Math.sin(t*1.5)*120:0;
-  const x=Number(c[2])+Math.cos(yaw)*range-Math.sin(yaw)*side,y=Number(c[3])+Math.sin(yaw)*range+Math.cos(yaw)*side;
+  const range=Number(control.range??150),side=control.mode==='orbit'?Math.sin(t*1.1)*100:0;
+  const key=JSON.stringify(control.anchor??null);
+  if(!anchor||key!==anchorKey){anchor=control.anchor??{x:Number(c[2])+Math.cos(yaw)*range,y:Number(c[3])+Math.sin(yaw)*range,z:Number(c[4])};anchorKey=key;}
+  let x,y;
+  if(control.mode==='fixed'||control.mode==='orbit-fixed'){x=anchor.x;y=anchor.y+(control.mode==='orbit-fixed'?Math.sin(t*.85)*90:0);c[4]=String(anchor.z);}
+  else{x=Number(c[2])+Math.cos(yaw)*range-Math.sin(yaw)*side;y=Number(c[3])+Math.sin(yaw)*range+Math.cos(yaw)*side;}
+  const now=performance.now(),dt=previousTarget?(now-previousTarget.time)/1000:0;
+  const speed=dt>0?Math.min(600,Math.hypot(x-previousTarget.x,y-previousTarget.y)/dt):0;
+  previousTarget={x,y,time:now};
   c[1]=String(++sequence);c[2]=x.toFixed(1);c[3]=y.toFixed(1);
   c[5]=(Math.atan2(Number(hostState[3])-y,Number(hostState[2])-x)*180/Math.PI).toFixed(1);
-  c[6]=control.mode==='orbit'?'180':'0';c[7]=c[8];
+  c[6]=speed.toFixed(1);c[7]=c[8];
   return {line:c.join(' ')+'\n',yaw:Number(c[5])};
 }
 function attack(target){
@@ -51,7 +59,7 @@ socket.on('message',data=>{
     if(m.t==='state'&&typeof m.s==='string'){
       const p=m.s.split('\n').find(x=>x.startsWith('P '));
       if(p){const c=p.trim().split(/\s+/);if(c.length>=9&&c.slice(2,9).every(x=>Number.isFinite(Number(x)))){
-        if(!hostState)report('player_snapshot_received',{fields:c.length});hostState=c;lastHostAt=Date.now();
+        if(!hostState)report('player_snapshot_received',{fields:c.length});if(c[1]!==hostSeq){hostSeq=c[1];hostUnique++;}hostState=c;lastHostAt=Date.now();
       }}
     }
     if(m.t==='state'&&m.e?.sid&&Array.isArray(m.e.l)){
@@ -75,7 +83,7 @@ socket.on('message',data=>{
 socket.on('error',e=>report('socket_error',{error:e.message}));
 await new Promise(r=>socket.bind(0,'127.0.0.1',r));
 const ping=setInterval(()=>send({t:'ping',ts:performance.now()/1000}),1000);
-const tick=setInterval(()=>{
+function tick(){
   if(controlFile){try{const text=fs.readFileSync(controlFile,'utf8');if(text!==lastControl){control={...control,...JSON.parse(text)};lastControl=text;report('control_changed',{mode:control.mode});}}catch{}}
   const target=playerLine();
   if(target){send({t:'state',s:target.line});returned++;
@@ -83,9 +91,17 @@ const tick=setInterval(()=>{
     else if(control.mode==='duel'&&Date.now()-lastAttack>Math.max(1500,Number(control.attackEveryMs)))attack(target);
   }
   if(pending.length||Date.now()-lastReport>1000)send({t:'state',e:{sid:session,l:pending.slice(0,16).map(x=>x.line)}});
-  if(Date.now()-lastReport>1000){lastReport=Date.now();report('simulator_progress',{received,returned,attacks:eventId,acked});}
-},50);
-const finish=()=>{if(finished)return;finished=true;clearInterval(ping);clearInterval(tick);clearTimeout(timer);socket.close();report('simulator_stopped',{received,returned,attacks:eventId,acked});};
+  if(Date.now()-lastReport>1000){lastReport=Date.now();report('simulator_progress',{received,returned,attacks:eventId,acked,hostUnique,requestedHz:stateHz});}
+}
+let nextTick=performance.now()+tickMs;
+function schedule(){
+ if(finished)return;
+ const now=performance.now();
+ if(now>=nextTick){tick();nextTick+=tickMs;if(nextTick<now-tickMs)nextTick=now+tickMs;}
+ sendTimer=setTimeout(schedule,Math.max(1,Math.floor(nextTick-performance.now())));
+}
+schedule();
+const finish=()=>{if(finished)return;finished=true;clearInterval(ping);clearTimeout(sendTimer);clearTimeout(timer);socket.close();report('simulator_stopped',{received,returned,attacks:eventId,acked});};
 process.on('SIGINT',finish);process.on('SIGTERM',finish);
 const timer=setTimeout(finish,duration);
 report('simulator_started',{port:room.GuestGamePort});
