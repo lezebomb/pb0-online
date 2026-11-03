@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-2026-11-03 当前完整开发阶段已通过验收并停止。两份真实游戏、模拟器及测试网络进程均已关闭。当前 Play 模式，最新个人存档已恢复。先读 `DEVELOPMENT-STATUS.md`、`verification/pvp-20261103.json` 和 `runs/save-profile-state.json`；不要因旧任务而自行继续测试。
+2026-11-03 用户明确暂停开发，要求同步可公开源码后删除本机 D:\pb0online 整个项目目录。个人存档已在原游戏位置，独立备份保留在 C:\Users\24981\Documents\PB0-Save-Backup；原游戏安装保留。没有新的明确恢复开发授权，不得启动测试。恢复时先读 `DEVELOPMENT-STATUS.md` 和最新 `verification/gait-recovery-20261103.json`；原 runs、工具及测试副本属于本机临时数据，已获准清理，不得假设仍然存在。
 
 ## 用户长期存档约定
 
